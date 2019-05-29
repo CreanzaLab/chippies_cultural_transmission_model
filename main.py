@@ -6,7 +6,6 @@ def initiate(min_int, max_int, dim1, total_steps):
     # low (inclusive), high(exclusive), discrete uniform distribution
     bird_matrix = np.random.randint(min_int, max_int, [dim1, dim1])
     prop_types = np.zeros((max_int, total_steps))
-    # init_counts = dict.fromkeys(list(range(low_prop, high_prop)), 0)
     return bird_matrix, prop_types
 
 
@@ -14,8 +13,6 @@ def count_type(prop_matrix, counts_array, step):
     unique, counts = np.unique(prop_matrix, return_counts=True)
     for u, c in zip(unique, counts):
         counts_array[u-1, step] = c
-    # prop_counts = dict.fromkeys(list(range(10, 101)), 0)
-    # prop_counts.update(dict(zip(unique, counts)))
     return counts_array
 
 
@@ -25,7 +22,7 @@ def locate_dead_birds(num_loc, matrix_dim):
     return loc_deaths
 
 
-def get_new_prop(im, row, col, d=1, rule='neutral'):
+def get_new_prop(im, row, col, d=1, rule='neutral', direction=None):
     # does not wrap the boundaries
 
     row_start = row - d
@@ -59,16 +56,18 @@ def get_new_prop(im, row, col, d=1, rule='neutral'):
 
     new_syll = []
     if rule == 'neutral':  # a random nearby song
-        # print(values)
         new_syll = np.random.choice(values)
+
     elif rule == 'conformity':  # most common value heard nearby, randomly chooses from ties
         new_syll = np.random.choice(np.where(np.bincount(values) == np.bincount(values).max())[0])
-    elif rule == 'directional':
-        new_syll = np.median(values)
+
+    elif rule == 'directional':  # value closest to some specified parameter, no need to handle ties (all same value)
+        new_syll = values[np.argmin(abs(values-direction))]
+
     return new_syll
 
 
-iterations = 1
+iterations = 50
 low_prop = 0
 high_prop = 100
 dim = 20
@@ -85,7 +84,7 @@ for timestep in range(iterations):
     new_props = []
     for bird in open_territories:
         # get new sylls for birds that will now occupy empty territories
-        new_props.append(get_new_prop(bird_matrix, bird[0], bird[1], d=1, rule='conformity'))
+        new_props.append(get_new_prop(bird_matrix, bird[0], bird[1], d=1, rule='directional', direction=(high_prop/2)-1))
     for bird, prop in zip(open_territories, new_props):
         # populate new territories
         bird_matrix[bird[0], bird[1]] = prop
