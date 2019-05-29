@@ -57,18 +57,18 @@ def get_new_prop(im, row, col, d=1, rule='neutral'):
 
     print(row, col, values)
 
+    new_syll = []
     if rule == 'neutral':  # a random nearby song
         # print(values)
         new_syll = np.random.choice(values)
-    elif rule == 'conformity':  # most common value heard nearby
-        new_syll = np.argmax(np.bincount(values))
+    elif rule == 'conformity':  # most common value heard nearby, randomly chooses from ties
+        new_syll = np.random.choice(np.where(np.bincount(values) == np.bincount(values).max())[0])
     elif rule == 'directional':
         new_syll = np.median(values)
     return new_syll
 
 
-
-iterations = 100
+iterations = 1
 low_prop = 0
 high_prop = 100
 dim = 20
@@ -78,6 +78,7 @@ bird_matrix, init_counts = initiate(low_prop, high_prop, dim, iterations)
 total_territories = dim ^ 2
 num_deaths = int(mortality_rate*total_territories)
 
+prop_counts = []
 for timestep in range(iterations):
     # some percent of birds die
     open_territories = locate_dead_birds(num_loc=num_deaths, matrix_dim=dim)
