@@ -26,41 +26,34 @@ def locate_dead_birds(num_loc, matrix_dim):
 
 
 def get_new_prop(im, row, col, d=1, rule='neutral'):
-    # does not wrap the territories, there are clear boundaries
+    # does not wrap the boundaries
 
-    # 4 corner cases
-    if row == 0 and col == 0:
-        n = im[row:row + d + 1, col:col + d + 1].flatten()
-        values = n[1:]  # always remove first element
-    elif row == len(im) - 1 and col == 0:
-        n = im[row - d:row + 1, col:col + d + 1].flatten()
-        values = np.hstack((n[:-(d + 1)], n[-d:]))  # always remove n[-(d+1)]
-    elif row == len(im) - 1 and col == len(im) - 1:
-        n = im[row - d:row + 1, col - d:col + 1].flatten()
-        values = n[:-1]  # always remove last number
-    elif row == 0 and col == len(im) - 1:
-        n = im[row:row + d + 1, col - d:col + 1].flatten()
-        values = np.hstack((n[:d], n[d + 1:]))  # always remove value at index d
+    row_start = row - d
+    row_end = row + d + 1
+    col_start = col - d
+    col_end = col + d + 1
 
-    # 4 edge cases
-    elif row == 0:
-        n = im[row:row + d + 1, col - d:col + d + 1].flatten()
-        values = np.hstack((n[:d], n[d + 1:]))
-    elif row == len(im) - 1:
-        n = im[row - d:row + 1, col - d:col + d + 1].flatten()
-        values = np.hstack((n[:-(d + 1)], n[-d:]))
-    elif col == 0:
-        n = im[row - d:row + d + 1, col:col + d + 1].flatten()
-        values = np.hstack((n[:(d + 1) * d], n[(d + 1)*d + 1:]))
-    elif col == len(im) - 1:
-        n = im[row - d:row + d + 1, col - d:col + 1].flatten()
-        values = np.hstack((n[:(d + 1) * d + d], n[-(d + 1) * d:]))
+    if row_start < 0:
+        row_start = 0
+    if row_end > len(im):
+        row_end = len(im)
+    if col_start < 0:
+        col_start = 0
+    if col_end > len(im):
+        col_end = len(im)
 
-    # all other cases
-    else:
-        n = im[row - d:row + d + 1, col - d:col + d + 1].flatten()
-        # remove the element (row,col)
-        values = np.hstack((n[:len(n)//2], n[len(n)//2+1:]))
+    # store syll value
+    syll = im[row, col]
+    # set bird territory to non-syll value
+    im[row, col] = -1
+
+    # take territory with neighbors
+    n = im[row_start:row_end, col_start:col_end].flatten()
+    # make list of neighbors syllables, not including bird of interest
+    values = n[n >= 0]
+
+    # reset bird of interest's syllable in the overall territory matrix
+    im[row, col] = syll
 
     print(row, col, values)
 
