@@ -1,12 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 import matplotlib
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
-import seaborn as sns; sns.set()
-import cv2
-
-
+# import seaborn as sns; sns.set()
 
 
 def initiate(min_int, max_int, dim1, total_steps):
@@ -30,12 +28,11 @@ def count_type(prop_matrix, counts_array, step):
 
 def locate_dead_birds(num_loc, matrix_dim):
     loc_deaths = np.random.randint(0, matrix_dim, size=(num_loc, 2))  # by chance could get the same element twice
-    # print(loc_deaths)
     return loc_deaths
 
 
-def get_new_prop(im, row, col, d=1, rule='neutral', error_rate=None, direction=None):
-    # does not wrap the boundaries
+def get_nearby_syllables(im, row, col, d=1):
+    # does not wrap the boundaries (boundaries are real irl)
 
     row_start = row - d
     row_end = row + d + 1
@@ -51,31 +48,30 @@ def get_new_prop(im, row, col, d=1, rule='neutral', error_rate=None, direction=N
     if col_end > len(im):
         col_end = len(im)
 
-    # store syll value
-    syll = im[row, col]
     # set bird territory to non-syll value
     im[row, col] = -1
 
-    # take territory with neighbors
+    # get values of neighbors
     n = im[row_start:row_end, col_start:col_end].flatten()
-    # make list of neighbors syllables, not including bird of interest
+    # remove syll of interest from list of neighboring sylls
     values = n[n >= 0]
 
-    # reset bird of interest's syllable in the overall territory matrix
-    im[row, col] = syll
+    return values
 
-    print(row, col, values)
+
+def get_learned_syll(sylls_to_copy, rule='neutral', error_rate=None, direction=None):
 
     if rule == 'neutral':  # a random nearby song
-        new_syll = np.random.choice(values)
+        new_syll = np.random.choice(sylls_to_copy)
 
     elif rule == 'conformity':  # most common value heard nearby, randomly chooses from ties
-        new_syll = np.random.choice(np.where(np.bincount(values) == np.bincount(values).max())[0])
+        new_syll = np.random.choice(np.where(np.bincount(sylls_to_copy) == np.bincount(sylls_to_copy).max())[0])
 
     elif rule == 'directional':  # value closest to some specified parameter, no need to handle ties (all same value)
-        new_syll = values[np.argmin(abs(values-direction))]
+        new_syll = sylls_to_copy[np.argmin(abs(sylls_to_copy - direction))]
 
     print('beginning syll', new_syll)
+
     # check if copy error is implemented
     if error_rate is None:
         insert = 'no'
@@ -84,7 +80,6 @@ def get_new_prop(im, row, col, d=1, rule='neutral', error_rate=None, direction=N
         print('error', r)
         if r < error_rate / 2:  # TODO make sure I have percentages correct with conditionals (equals to?)
             insert = 'left'
-            # new_syll = new_syll
         elif r > 1 - (error_rate / 2):
             insert = 'right'
             new_syll = new_syll + 1
@@ -98,7 +93,7 @@ def get_new_prop(im, row, col, d=1, rule='neutral', error_rate=None, direction=N
 """
 Cultural Transmission Model
 """
-iterations = 10
+iterations = 100
 low_prop = 0
 high_prop = 100
 dim = 20
@@ -107,6 +102,19 @@ mortality_rate = 0.4
 bird_matrix, init_counts = initiate(low_prop, high_prop, dim, iterations)
 total_territories = dim ^ 2
 num_deaths = int(mortality_rate*total_territories)
+
+# initialize figure for video frames
+video_name = 'directionalTo49_5percent_100iters.mp4'
+dpi = 100
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.set_aspect('equal')
+ax.get_xaxis().set_visible(False)
+ax.get_yaxis().set_visible(False)
+
+frame = ax.imshow(bird_matrix, cmap='gray')
+fig.set_size_inches([5, 5])
+frames = [[frame]]
 
 prop_counts = init_counts
 for timestep in range(iterations):
@@ -117,8 +125,8 @@ for timestep in range(iterations):
     new_props = []
     for bird in open_territories:
         # get new sylls for birds that will now occupy empty territories
-        new_props.append(get_new_prop(bird_matrix, bird[0], bird[1],
-                                      d=1, error_rate=0.5, rule='neutral', direction=None))
+        neighbor_sylls = get_nearby_syllables(bird_matrix, bird[0], bird[1], d=1)
+        new_props.append(get_learned_syll(neighbor_sylls, rule='directional', error_rate=0.05, direction=high_prop // 2 - 1))
 
     # before adding new birds, shift syllable values (bird matrix and prop count) to make room for invented syllables
     unique_props = [list(x) for x in set(tuple(x) for x in new_props)]
@@ -149,8 +157,13 @@ for timestep in range(iterations):
 
     # count syllables
     prop_counts = count_type(bird_matrix, prop_counts, timestep + 1)
-    # plt.imshow(bird_matrix)
-    # plt.show()
+
+    frames.append([ax.imshow(bird_matrix, cmap='gray')])
+
+video = animation.ArtistAnimation(fig, frames, interval=500, blit=False,
+                                  repeat_delay=1000)
+# video.save(video_name)
+plt.close()
 
 plt.bar(range(len(init_counts)), init_counts[:, 0])
 plt.xlabel('syllable type')
@@ -169,4 +182,3 @@ plt.title('end')
 plt.xlabel('number of birds with a syllable type')
 plt.ylabel('number of syllable types')
 plt.show()
-# print(bird_matrix, prop_counts)
