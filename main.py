@@ -1,18 +1,30 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+import seaborn as sns; sns.set()
+import cv2
+
+
 
 
 def initiate(min_int, max_int, dim1, total_steps):
+    # populate each element (territory) with a random bird (syllable type)
     # low (inclusive), high(exclusive), discrete uniform distribution
     bird_matrix = np.random.randint(min_int, max_int, [dim1, dim1])
-    prop_types = np.zeros((max_int, total_steps))
+
+    # create array to store counts of syllable types for each iteration
+    prop_types = np.zeros((max_int, total_steps + 1))
+    prop_types = count_type(bird_matrix, prop_types, 0)
     return bird_matrix, prop_types
 
 
 def count_type(prop_matrix, counts_array, step):
     unique, counts = np.unique(prop_matrix, return_counts=True)
+    print(unique)
     for u, c in zip(unique, counts):
-        counts_array[u-1, step] = c
+        counts_array[u, step] = c
     return counts_array
 
 
@@ -22,7 +34,7 @@ def locate_dead_birds(num_loc, matrix_dim):
     return loc_deaths
 
 
-def get_new_prop(im, row, col, d=1, rule='neutral', direction=None):
+def get_new_prop(im, row, col, d=1, rule='neutral', error_rate=None, direction=None):
     # does not wrap the boundaries
 
     row_start = row - d
@@ -54,7 +66,6 @@ def get_new_prop(im, row, col, d=1, rule='neutral', direction=None):
 
     print(row, col, values)
 
-    new_syll = []
     if rule == 'neutral':  # a random nearby song
         new_syll = np.random.choice(values)
 
@@ -64,10 +75,30 @@ def get_new_prop(im, row, col, d=1, rule='neutral', direction=None):
     elif rule == 'directional':  # value closest to some specified parameter, no need to handle ties (all same value)
         new_syll = values[np.argmin(abs(values-direction))]
 
-    return new_syll
+    print('beginning syll', new_syll)
+    # check if copy error is implemented
+    if error_rate is None:
+        insert = 'no'
+    else:  # if some copy error, find if this bird has had an error while learning/invented a new syll
+        r = np.random.random()
+        print('error', r)
+        if r < error_rate / 2:  # TODO make sure I have percentages correct with conditionals (equals to?)
+            insert = 'left'
+            # new_syll = new_syll
+        elif r > 1 - (error_rate / 2):
+            insert = 'right'
+            new_syll = new_syll + 1
+        else:
+            insert = 'no'
+    print('after error', new_syll, insert)
+
+    return [new_syll, insert]
 
 
-iterations = 50
+"""
+Cultural Transmission Model
+"""
+iterations = 10
 low_prop = 0
 high_prop = 100
 dim = 20
@@ -77,20 +108,55 @@ bird_matrix, init_counts = initiate(low_prop, high_prop, dim, iterations)
 total_territories = dim ^ 2
 num_deaths = int(mortality_rate*total_territories)
 
-prop_counts = []
+prop_counts = init_counts
 for timestep in range(iterations):
+
     # some percent of birds die
     open_territories = locate_dead_birds(num_loc=num_deaths, matrix_dim=dim)
+
     new_props = []
     for bird in open_territories:
         # get new sylls for birds that will now occupy empty territories
-        new_props.append(get_new_prop(bird_matrix, bird[0], bird[1], d=1, rule='directional', direction=(high_prop/2)-1))
-    for bird, prop in zip(open_territories, new_props):
-        # populate new territories
+        new_props.append(get_new_prop(bird_matrix, bird[0], bird[1],
+                                      d=1, error_rate=0.5, rule='neutral', direction=None))
+
+    # before adding new birds, shift syllable values (bird matrix and prop count) to make room for invented syllables
+    unique_props = [list(x) for x in set(tuple(x) for x in new_props)]
+    print(new_props)
+    print('unique props', unique_props)
+    for new in unique_props:
+        print('item in unique props', new)
+        if new[1] == 'no':
+            pass
+        else:
+            # increase all syllables in bird_matrix by 1 if greater than or equal to invented syllable
+            bird_matrix[bird_matrix >= new[0]] = bird_matrix[bird_matrix >= new[0]] + 1
+            # must also increase the invented syllables by 1 if greater than the invented syllable
+            # this has to be done on both the full and unique lists
+            for item in unique_props:
+                if item[0] > new[0]:
+                    item[0] = item[0] + 1
+            for item in new_props:
+                if item[0] > new[0]:
+                    item[0] = item[0] + 1
+
+            # add row of zeros into the count matrix for each invented syllable (row # is the syllable #)
+            prop_counts = np.insert(prop_counts, new[0], np.zeros(prop_counts.shape[1]), axis=0)
+
+    # add new birds to the open territories (where old birds died)
+    for bird, prop in zip(open_territories, [item[0] for item in new_props]):
         bird_matrix[bird[0], bird[1]] = prop
-    prop_counts = count_type(bird_matrix, init_counts, timestep)
-    plt.imshow(bird_matrix)
-    plt.show()
+
+    # count syllables
+    prop_counts = count_type(bird_matrix, prop_counts, timestep + 1)
+    # plt.imshow(bird_matrix)
+    # plt.show()
+
+plt.bar(range(len(init_counts)), init_counts[:, 0])
+plt.xlabel('syllable type')
+plt.ylabel('number of birds with syllable type')
+plt.title('random initial song types: discrete uniform distribution')
+plt.show()
 
 plt.hist(prop_counts[:, 0])
 plt.title('beginning')
@@ -104,17 +170,3 @@ plt.xlabel('number of birds with a syllable type')
 plt.ylabel('number of syllable types')
 plt.show()
 # print(bird_matrix, prop_counts)
-
-
-# if row == 0:
-# # neighbors1 = im[-1, col-d:col+d+1]
-# # neighbors2 = im[row, col-d:col+d+1]
-# # neighbors3 = im[row+d, col-d:col+d+1]
-# # n = np.concatenate((neighbors1, neighbors2, neighbors3))
-# wraps edge
-# n = im[(-1, row, row + d), col - d:col + d + 1].flatten()
-# values = np.hstack((n[:len(n)//2], n[len(n)//2+1:]))
-# elif col == 0:
-# wraps edge
-# n = im[row - d:row + d + 1, (-1, col, col + d)].flatten()
-# values = np.hstack((n[:len(n) // 2], n[len(n) // 2 + 1:]))
