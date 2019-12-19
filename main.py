@@ -55,9 +55,9 @@ Cultural Transmission Model
 
 home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
-           '/RealYearlySamplingFreq'
+           '/RealYearlySamplingFreq/Testing2'
 runs = {}
-model_type = 'conformity'
+model_type = 'neutral'
 direction = None
 
 iterations = 100
@@ -65,8 +65,10 @@ low_prop = 0
 high_prop = 100
 dim = 500
 mortality_rate = 0.4
+num_syll_types = high_prop
+num_samples = 68  # comes from 2017-1950 (dates we have data from)
 
-for p in np.arange(0, 0.11, 0.01):
+for p in np.arange(0.5, 0.51, 0.01):
     file_name = model_type + '_' \
                 + str(p) + 'error_' \
                 + str(int(mortality_rate*100)) + 'mortality_' \
@@ -82,34 +84,33 @@ for run, params in runs.items():
     os.mkdir(path)
     os.chdir(path)
 
-    bird_matrix, init_counts = fns.initiate(low_prop, high_prop, dim,
-                                            iterations)
-    total_territories = dim**2
+    total_territories = dim ** 2
     num_deaths = int(mortality_rate*total_territories)
+    vector_size = int(total_territories * iterations * params[1] * \
+                  mortality_rate * 10)
+
+    bird_matrix, current_bps, actual_lifetimes, unique_bps, sample_bps, \
+        sample_unique_bps, first_sampled, last_sampled = \
+        fns.initiate(low_prop, high_prop, dim, iterations, vector_size)
+
+    current_bps = fns.count_type(bird_matrix, vector_size)
+
+    bird_counts_t0 = current_bps.copy()
 
     # initialize figure for video frames
-    want_to_save = False
-    video_name = run + '.mp4'
-    dpi = 100
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.set_aspect('equal')
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-
-    frame = ax.imshow(bird_matrix, cmap='gray')
-    # cbar = fig.colorbar(frame)
-    fig.set_size_inches([5, 5])
-    frames = [[frame]]
-
-    prop_counts = init_counts
-    bird_counts = init_counts
-    sample_counts = np.zeros((high_prop, iterations + 1), dtype='int')
-
-    # don't need to do if we don't care about sampling before 1950
-    # samples = fns.sample_birds(bird_matrix, sample_freq[0])
-    # for i in samples:
-    #     sample_counts[i, 0] += 1
+    # want_to_save = False
+    # video_name = run + '.mp4'
+    # dpi = 100
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.set_aspect('equal')
+    # ax.get_xaxis().set_visible(False)
+    # ax.get_yaxis().set_visible(False)
+    #
+    # frame = ax.imshow(bird_matrix, cmap='gray')
+    # # cbar = fig.colorbar(frame)
+    # fig.set_size_inches([5, 5])
+    # frames = [[frame]]
 
     for timestep in range(iterations):
         print('timestep', timestep)
@@ -123,68 +124,73 @@ for run, params in runs.items():
                                                       bird[1], d=1)
 
             # print(neighbor_sylls)
-            new_props.append(fns.get_learned_syll(neighbor_sylls,
-                                                  rule=params[0],
-                                                  error_rate=params[1],
-                                                  direction=params[2]))
-
-        # before adding new birds, shift syllable values (bird matrix and prop count) to make room for invented syllables
-        unique_props = [list(x) for x in set(tuple(x) for x in new_props)]
-        # print(new_props)
-        # print('unique props', unique_props)
-        for new in unique_props:
-            # print('item in unique props', new)
-            if new[1] == 'no':
-                pass
-            else:
-                # increase all syllables in bird_matrix by 1 if greater than or equal to invented syllable
-                bird_matrix[bird_matrix >= new[0]] = bird_matrix[bird_matrix >= new[0]] + 1
-                # must also increase the invented syllables by 1 if greater than the invented syllable
-                # this has to be done on both the full and unique lists
-                for item in unique_props:
-                    if item[0] > new[0]:
-                        item[0] = item[0] + 1
-                for item in new_props:
-                    if item[0] > new[0]:
-                        item[0] = item[0] + 1
-
-                # add row of zeros into the count matrix for each invented syllable (row # is the syllable #)
-                prop_counts = np.insert(prop_counts, new[0], np.zeros(prop_counts.shape[1]), axis=0)
-                bird_counts = np.insert(bird_counts, new[0], np.zeros(bird_counts.shape[1]), axis=0)
-                sample_counts = np.insert(sample_counts, new[0], np.zeros(sample_counts.shape[1]), axis=0)
-
-                # print('timestep', timestep, 'num sylls', len(prop_counts))
+            new_syll, num_syll_types = fns.get_learned_syll(neighbor_sylls,
+                                                            num_syll_types,
+                                                            rule=params[0],
+                                                            error_rate=params[1],
+                                                            direction=params[2])
+            new_props.append(new_syll)
 
         # add new birds to the open territories (where old birds died)
-        for bird, prop in zip(open_territories, [item[0] for item in new_props]):
+        for bird, prop in zip(open_territories, new_props):
             bird_matrix[bird[0], bird[1]] = prop
-            bird_counts[prop, timestep + 1] += 1  # count number of new birds with a property
-
-        # count syllables
-        prop_counts = fns.count_type(bird_matrix, prop_counts, timestep + 1)
+            if timestep > iterations - num_samples:
+                unique_bps[prop] += 1  # count number of new birds with a property
 
         # sample the birds at this timestep (don't need to sample before 1950)
-        if timestep > 31:
+
+        if timestep == iterations - num_samples:
+            unique_bps = fns.count_type(bird_matrix, vector_size)
+            bird_counts_t1950 = unique_bps.copy()
+
+        if timestep >= iterations - num_samples:
+            # sampling
             samples = fns.sample_birds(bird_matrix, sample_freq[timestep])
-            for i in samples:
-                sample_counts[i, timestep + 1] += 1
 
-        new_frame = ax.imshow(bird_matrix, cmap='gray')
+            # updating information based on sample
+            sample_bps = fns.count_type(samples, vector_size)
+            sample_unique_bps += sample_bps
+            first_sampled[(first_sampled == 0) & (sample_bps > 0)] = \
+                timestep
+            last_sampled[sample_bps > 0] = timestep + 1
 
-        frames.append([new_frame])
+            if timestep == iterations - num_samples:
+                sampled_bird_counts_t1950 = sample_bps.copy()
 
-    video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,
-                                      repeat_delay=1000)
-    if want_to_save:
-        video.save(video_name)
+            # updating information based on full bird matrix
+            current_bps = fns.count_type(bird_matrix, vector_size)
+            actual_lifetimes[current_bps > 0] += 1
 
+        # new_frame = ax.imshow(bird_matrix, cmap='gray')
+        #
+        # frames.append([new_frame])
+
+    # video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,
+    #                                   repeat_delay=1000)
+    # if want_to_save:
+    #     video.save(video_name)
     plt.close()
 
-    np.savetxt('init_counts.csv', init_counts, delimiter=",")
-    np.savetxt('prop_counts.csv', prop_counts, delimiter=",")
-    np.savetxt('sample_counts.csv', sample_counts, delimiter=",")
-    np.savetxt('bird_counts.csv', bird_counts, delimiter=",")
+    sampled_lifetimes = last_sampled - first_sampled
+    sampled_bird_counts_t2017 = sample_bps.copy()
+    bird_counts_t2017 = current_bps.copy()
+
+    # save full matrix information
+    np.savetxt('actual_lifetimes_starting_1950.csv', actual_lifetimes,
+               delimiter=",")
+    np.savetxt('bird_counts_t0.csv', bird_counts_t0, delimiter=",")
+    np.savetxt('bird_counts_t1950.csv', bird_counts_t1950, delimiter=",")
+    np.savetxt('bird_counts_t2017.csv', bird_counts_t2017, delimiter=",")
+    np.savetxt('unique_birds_with_syllables.csv', unique_bps,
+               delimiter=",")
+
+    np.savetxt('sampled_lifetimes.csv', sampled_lifetimes, delimiter=",")
+    np.savetxt('sampled_bird_counts_t1950.csv', sampled_bird_counts_t1950,
+               delimiter=",")
+    np.savetxt('sampled_bird_counts_t2017.csv', sampled_bird_counts_t2017,
+               delimiter=",")
+    np.savetxt('sampled_birds_with_syllables.csv', sample_unique_bps,
+               delimiter=",")
+
+
     print("--- %s seconds ---" % (time.time() - start_time))
-
-    del(init_counts, prop_counts, sample_counts, bird_counts)
-
