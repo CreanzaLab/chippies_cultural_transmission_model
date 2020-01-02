@@ -110,8 +110,9 @@ for f in folders:
     num_syll_types = np.sum(sample_counts > 0)
     x = np.arange(max(sampled_lifetimes))
     y = np.bincount(sampled_lifetimes)
+    print('check number with 0 lifespan, should be none: ', y[0])
 
-    plt.bar(x + 1, y[1:])
+    plt.bar(x + 1, y[1:])  # don't include no. with 0 lifespan (should be none)
     plt.title('Sampled: ' + ' total number of syll types: ' + str(
         num_syll_types))
     plt.xlabel('lifespan')

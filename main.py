@@ -66,8 +66,9 @@ high_prop = 100
 dim = 500
 mortality_rate = 0.4
 num_syll_types = high_prop
-num_samples = 68  # comes from 2017-1950 (dates we have data from)
+num_samples = 68  # must be less than iterations, 68 comes from 2017-1950 (dates we have data from)
 
+# setup runs with various parameters
 for p in np.arange(0.5, 0.51, 0.01):
     file_name = model_type + '_' \
                 + str(p) + 'error_' \
@@ -76,7 +77,7 @@ for p in np.arange(0.5, 0.51, 0.01):
                 + str(dim) + 'dim'
     runs.update({file_name: [model_type, p/100, direction]})
 
-
+# iterate through each of the runs, each with unique parameters
 for run, params in runs.items():
     print(run)
     start_time = time.time()
@@ -84,17 +85,20 @@ for run, params in runs.items():
     os.mkdir(path)
     os.chdir(path)
 
+    # create matrix with each element being a bird
     total_territories = dim ** 2
     num_deaths = int(mortality_rate*total_territories)
+    # create empty vector w/ more space than expected for num of sylls created
     vector_size = int(total_territories * iterations * params[1] * \
                   mortality_rate * 10)
 
+    # initialize the first set of birds
     bird_matrix, current_bps, actual_lifetimes, unique_bps, sample_bps, \
         sample_unique_bps, first_sampled, last_sampled = \
         fns.initiate(low_prop, high_prop, dim, iterations, vector_size)
 
+    # find number of birds that have each syllable type, save initial state
     current_bps = fns.count_type(bird_matrix, vector_size)
-
     bird_counts_t0 = current_bps.copy()
 
     # initialize figure for video frames
@@ -114,10 +118,10 @@ for run, params in runs.items():
 
     for timestep in range(iterations):
         print('timestep', timestep)
-        # some percent of birds die
+        # some percent of birds die, find their grid location
         open_territories = fns.locate_dead_birds(num_loc=num_deaths,
                                                  matrix_dim=dim)
-        new_props = []
+        new_props = []  # list of learned syllable types (could be a new type)
         for bird in open_territories:
             # get new sylls for birds that will now occupy empty territories
             neighbor_sylls = fns.get_nearby_syllables(bird_matrix, bird[0],
@@ -134,26 +138,34 @@ for run, params in runs.items():
         # add new birds to the open territories (where old birds died)
         for bird, prop in zip(open_territories, new_props):
             bird_matrix[bird[0], bird[1]] = prop
+            # after the first timestep in which we sample, increment the
+            # number of birds with a syllable type for each new bird
             if timestep > iterations - num_samples:
-                unique_bps[prop] += 1  # count number of new birds with a property
+                unique_bps[prop] += 1
 
-        # sample the birds at this timestep (don't need to sample before 1950)
-
+        # when the timestep is the first year to sample, initiate unique_bps
         if timestep == iterations - num_samples:
             unique_bps = fns.count_type(bird_matrix, vector_size)
             bird_counts_t1950 = unique_bps.copy()
 
+        # sample the birds at this timestep (don't need to sample before 1950)
         if timestep >= iterations - num_samples:
             # sampling
             samples = fns.sample_birds(bird_matrix, sample_freq[timestep])
 
             # updating information based on sample
+            # number of sampled birds with a syllable type
             sample_bps = fns.count_type(samples, vector_size)
+            # assume each sampled bird has never been sampled before
+            # thus, add the sampled syllables to the count of individual birds that have had that syllable type
             sample_unique_bps += sample_bps
+            # store timestep the syllable first appeared
             first_sampled[(first_sampled == 0) & (sample_bps > 0)] = \
                 timestep
+            # increment timestep the syllable last appeared
             last_sampled[sample_bps > 0] = timestep + 1
 
+            # save the first sample
             if timestep == iterations - num_samples:
                 sampled_bird_counts_t1950 = sample_bps.copy()
 
@@ -171,6 +183,7 @@ for run, params in runs.items():
     #     video.save(video_name)
     plt.close()
 
+    # calculate lifespan of sampled syllables 
     sampled_lifetimes = last_sampled - first_sampled
     sampled_bird_counts_t2017 = sample_bps.copy()
     bird_counts_t2017 = current_bps.copy()
