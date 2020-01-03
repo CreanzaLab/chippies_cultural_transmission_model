@@ -173,42 +173,38 @@ for f in folders:
         plt.close()
 
 
+    # x = number of birds singing a syll type, y = number of syllable types
+    plt.figure(6)
+    my_dpi = 96
+    sns.set(style='white')
+    sns.set_context({"figure.figsize": (20, 7)})
 
+    total_sylls = np.count_nonzero(np.sum(bird_counts[:, 33:], axis=1))
+    num_sylls = np.bincount(np.sum(bird_counts[:, 33:], axis=1))[1:]
 
+    count_binned = [num_sylls[n:n + 1000] for n in range(0, len(num_sylls), 1000)]
+    count_binned = [np.sum(count_binned[i]) for i in range(0, len(count_binned))]
 
+    x = np.arange(len(count_binned))
+    y = np.asarray(count_binned)/total_sylls
+    plt.bar(x, y)
+    plt.title('all iterations' + ' total number of sylls: ' + str(total_sylls))
+    plt.xlabel('number of birds with a syllable type')
+    plt.ylabel('number of syllable types')
+    # plt.xlim(0, 100)
+    # plt.xticks(range(1, 71))
+    # plt.ylim(0, 1)
 
-    # # x = number of birds singing a syll type, y = number of syllable types
-    # plt.figure(6)
-    # my_dpi = 96
-    # sns.set(style='white')
-    # sns.set_context({"figure.figsize": (20, 7)})
-    #
-    # # print(np.sum(bird_counts, axis=1))
-    # print('before bincount')
-    # num_sylls = np.bincount(np.sum(bird_counts, axis=1))
-    # print('after bincount')
-    # x = np.arange(len(num_sylls))
-    # y = num_sylls/len(bird_counts[:, 0])
-    # plt.bar(x[1:], y[1:])
-    # plt.title('all iterations' + ' total number of sylls: ' + str(len(bird_counts)))
-    # plt.xlabel('number of birds with a syllable type')
-    # plt.ylabel('number of syllable types')
-    # # plt.xlim(0, 100)
-    # # plt.xticks(range(1, 71))
-    # # plt.ylim(0, 1)
-    #
-    # if save_plots:
-    #     plt.tight_layout()
-    #     print('before save')
-    #     plt.savefig(
-    #         "num_sylls_with_num_birds_all_time"
-    #         + '.pdf', type='pdf', bbox_inches='tight',
-    #         transparent=True)
-    #     print('after save')
-    #     plt.close()
-    # else:
-    #     plt.show()
-    #     plt.close()
+    if save_plots:
+        plt.tight_layout()
+        plt.savefig(
+            "num_sylls_with_num_birds_67yrs_actual"
+            + '.pdf', type='pdf', bbox_inches='tight',
+            transparent=True)
+        plt.close()
+    else:
+        plt.show()
+        plt.close()
 
 
 
