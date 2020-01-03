@@ -29,11 +29,14 @@ def count_type(territories, vector_size):
     counts_array = np.zeros(vector_size, dtype='int')
     for u, c in zip(unique, counts):
         counts_array[u] = c
+
     return counts_array
 
 
-def locate_dead_birds(num_loc, matrix_dim):
-    loc_deaths = np.random.randint(0, matrix_dim, size=(num_loc, 2))  # by chance could get the same element twice
+def locate_dead_birds(ordered_pairs, num_loc):
+    np.random.shuffle(ordered_pairs)
+    loc_deaths = ordered_pairs[:num_loc]
+
     return loc_deaths
 
 

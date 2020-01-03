@@ -7,6 +7,7 @@ matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 import seaborn as sns; sns.set()
 import os
+import itertools
 import model_functions as fns
 import time
 import sys
@@ -55,7 +56,7 @@ Cultural Transmission Model
 
 home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
-           '/RealYearlySamplingFreq/Testing2'
+           '/RealYearlySamplingFreq/Testing4'
 runs = {}
 model_type = 'neutral'
 direction = None
@@ -68,8 +69,11 @@ mortality_rate = 0.4
 num_syll_types = high_prop
 num_samples = 68  # must be less than iterations, 68 comes from 2017-1950 (dates we have data from)
 
+# get list of all coordinate pairs of matrix
+all_coord = list(itertools.product(range(0, dim), range(0, dim)))
+
 # setup runs with various parameters
-for p in np.arange(0.5, 0.51, 0.01):
+for p in np.arange(0.05, 0.051, 0.01):
     file_name = model_type + '_' \
                 + str(p) + 'error_' \
                 + str(int(mortality_rate*100)) + 'mortality_' \
@@ -117,17 +121,16 @@ for run, params in runs.items():
     # frames = [[frame]]
 
     for timestep in range(iterations):
-        print('timestep', timestep)
+        print('\ntimestep', timestep)
         # some percent of birds die, find their grid location
-        open_territories = fns.locate_dead_birds(num_loc=num_deaths,
-                                                 matrix_dim=dim)
+        open_territories = fns.locate_dead_birds(ordered_pairs=all_coord,
+                                                 num_loc=num_deaths)
         new_props = []  # list of learned syllable types (could be a new type)
         for bird in open_territories:
             # get new sylls for birds that will now occupy empty territories
             neighbor_sylls = fns.get_nearby_syllables(bird_matrix, bird[0],
                                                       bird[1], d=1)
 
-            # print(neighbor_sylls)
             new_syll, num_syll_types = fns.get_learned_syll(neighbor_sylls,
                                                             num_syll_types,
                                                             rule=params[0],
@@ -183,7 +186,7 @@ for run, params in runs.items():
     #     video.save(video_name)
     plt.close()
 
-    # calculate lifespan of sampled syllables 
+    # calculate lifespan of sampled syllables
     sampled_lifetimes = last_sampled - first_sampled
     sampled_bird_counts_t2017 = sample_bps.copy()
     bird_counts_t2017 = current_bps.copy()

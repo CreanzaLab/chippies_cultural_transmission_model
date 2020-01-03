@@ -15,7 +15,7 @@ Load in counts from run
 
 home_path = 'C:/Users/abiga\Box ' \
             'Sync\Abigail_Nicole\ChippiesSyllableModel' \
-            '/RealYearlySamplingFreq/Testing2/500DimMatrix'
+            '/RealYearlySamplingFreq/Testing3/500DimMatrix'
 
 folders = glob(home_path + "/*/")
 
@@ -24,10 +24,33 @@ for f in folders:
 
     os.chdir(f)
 
+    birds_t0 = np.genfromtxt('bird_counts_t0.csv',
+                                     dtype='int32', delimiter=',')
+    birds_t1950 = np.genfromtxt('bird_counts_t1950.csv',
+                                     dtype='int32', delimiter=',')
+    birds_t2017 = np.genfromtxt('bird_counts_t2017.csv',
+                                     dtype='int32', delimiter=',')
+
+    print('no. nonzero t0: ', np.sum(birds_t0 > 0))
+    print('no. nonzero t1950: ', np.sum(birds_t1950 > 0))
+    print('no. nonzero t2017: ', np.sum(birds_t2017 > 0))
+
+    actual_lifetimes = np.genfromtxt('actual_lifetimes_starting_1950.csv',
+                                     dtype='int32', delimiter=',')
+    actual_counts = np.genfromtxt('unique_birds_with_syllables.csv',
+                                  dtype='int32', delimiter=',')
     sampled_lifetimes = np.genfromtxt('sampled_lifetimes.csv', dtype='int32',
                                       delimiter=',')
     sample_counts = np.genfromtxt('sampled_birds_with_syllables.csv',
                                   dtype='int32', delimiter=',')
+
+    print('total number of syllable types: ', np.sum(actual_lifetimes > 0))
+    print('total number of syllable types: ', np.sum(actual_counts > 0))
+
+    print('(sampled) total number of syllable types: ', np.sum(
+        sampled_lifetimes > 0))
+    print('(sampled) total number of syllable types: ', np.sum(
+        sample_counts > 0))
 
     """
     Plotting results
@@ -102,17 +125,18 @@ for f in folders:
     #
     #
 
-    plt.figure(4)
     my_dpi = 96
     sns.set(style='white')
     sns.set_context({"figure.figsize": (20, 7)})
+    plt.figure(4)
 
     num_syll_types = np.sum(sample_counts > 0)
     x = np.arange(max(sampled_lifetimes))
     y = np.bincount(sampled_lifetimes)
-    print('check number with 0 lifespan, should be none: ', y[0])
 
-    plt.bar(x + 1, y[1:])  # don't include no. with 0 lifespan (should be none)
+    # don't include no. with 0 lifespan (will be a lot since vector was made
+    # much larger than needed)
+    plt.bar(x + 1, y[1:])
     plt.title('Sampled: ' + ' total number of syll types: ' + str(
         num_syll_types))
     plt.xlabel('lifespan')
@@ -174,10 +198,10 @@ for f in folders:
 
 
     # x = number of birds singing a syll type, y = number of syllable types
-    plt.figure(5)
     my_dpi = 96
     sns.set(style='white')
     sns.set_context({"figure.figsize": (20, 7)})
+    plt.figure(5)
 
     num_syll_types = np.sum(sample_counts > 0)
     bin_count_syll_types = np.bincount(sample_counts)
