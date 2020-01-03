@@ -106,19 +106,19 @@ for run, params in runs.items():
     bird_counts_t0 = current_bps.copy()
 
     # initialize figure for video frames
-    # want_to_save = False
-    # video_name = run + '.mp4'
-    # dpi = 100
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111)
-    # ax.set_aspect('equal')
-    # ax.get_xaxis().set_visible(False)
-    # ax.get_yaxis().set_visible(False)
-    #
-    # frame = ax.imshow(bird_matrix, cmap='gray')
-    # # cbar = fig.colorbar(frame)
-    # fig.set_size_inches([5, 5])
-    # frames = [[frame]]
+    want_to_save = True
+    video_name = run + '.mp4'
+    dpi = 100
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_aspect('equal')
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    frame = ax.imshow(bird_matrix, cmap='gray')
+    # cbar = fig.colorbar(frame)
+    fig.set_size_inches([5, 5])
+    frames = [[frame]]
 
     for timestep in range(iterations):
         print('\ntimestep', timestep)
@@ -136,6 +136,7 @@ for run, params in runs.items():
                                                             rule=params[0],
                                                             error_rate=params[1],
                                                             direction=params[2])
+
             new_props.append(new_syll)
 
         # add new birds to the open territories (where old birds died)
@@ -176,14 +177,14 @@ for run, params in runs.items():
             current_bps = fns.count_type(bird_matrix, vector_size)
             actual_lifetimes[current_bps > 0] += 1
 
-        # new_frame = ax.imshow(bird_matrix, cmap='gray')
-        #
-        # frames.append([new_frame])
+        new_frame = ax.imshow(bird_matrix, cmap='gray')
 
-    # video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,
-    #                                   repeat_delay=1000)
-    # if want_to_save:
-    #     video.save(video_name)
+        frames.append([new_frame])
+
+    video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,
+                                      repeat_delay=1000)
+    if want_to_save:
+        video.save(video_name)
     plt.close()
 
     # calculate lifespan of sampled syllables

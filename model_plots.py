@@ -243,10 +243,12 @@ for f in folders:
     plt.figure(6)
 
     num_syll_types = np.sum(actual_counts > 0)
+    print(num_syll_types)
     bin_count_syll_types = np.bincount(actual_counts)[1:]  # don't plot syllables that never existed
 
     count_binned = [bin_count_syll_types[n:n + 1000] for n in range(0, len(bin_count_syll_types), 1000)]
     count_binned = [np.sum(count_binned[i]) for i in range(0, len(count_binned))]
+    print(count_binned)
 
     x = np.arange(len(count_binned))
     y = count_binned / num_syll_types
