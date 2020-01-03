@@ -7,6 +7,7 @@ matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 import seaborn as sns; sns.set()
 import os
+import itertools
 import model_functions as fns
 import time
 import sys
@@ -55,9 +56,9 @@ Cultural Transmission Model
 
 home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
-           '/RealYearlySamplingFreq'
+           '/RealYearlySamplingFreq/Testing4_old'
 runs = {}
-model_type = 'conformity'
+model_type = 'neutral'
 direction = None
 
 iterations = 100
@@ -66,7 +67,11 @@ high_prop = 100
 dim = 500
 mortality_rate = 0.4
 
-for p in np.arange(0, 0.11, 0.01):
+# get list of all coordinate pairs of matrix
+all_coord = list(itertools.product(range(0, dim), range(0, dim)))
+
+# setup runs with various parameters
+for p in np.arange(0.05, 0.051, 0.01):
     file_name = model_type + '_' \
                 + str(p) + 'error_' \
                 + str(int(mortality_rate*100)) + 'mortality_' \
@@ -74,7 +79,7 @@ for p in np.arange(0, 0.11, 0.01):
                 + str(dim) + 'dim'
     runs.update({file_name: [model_type, p/100, direction]})
 
-
+# iterate through each of the runs, each with unique parameters
 for run, params in runs.items():
     print(run)
     start_time = time.time()
@@ -88,19 +93,19 @@ for run, params in runs.items():
     num_deaths = int(mortality_rate*total_territories)
 
     # initialize figure for video frames
-    want_to_save = False
-    video_name = run + '.mp4'
-    dpi = 100
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.set_aspect('equal')
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-
-    frame = ax.imshow(bird_matrix, cmap='gray')
-    # cbar = fig.colorbar(frame)
-    fig.set_size_inches([5, 5])
-    frames = [[frame]]
+    # want_to_save = False
+    # video_name = run + '.mp4'
+    # dpi = 100
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.set_aspect('equal')
+    # ax.get_xaxis().set_visible(False)
+    # ax.get_yaxis().set_visible(False)
+    #
+    # frame = ax.imshow(bird_matrix, cmap='gray')
+    # # cbar = fig.colorbar(frame)
+    # fig.set_size_inches([5, 5])
+    # frames = [[frame]]
 
     prop_counts = init_counts
     bird_counts = init_counts
@@ -112,17 +117,17 @@ for run, params in runs.items():
     #     sample_counts[i, 0] += 1
 
     for timestep in range(iterations):
-        print('timestep', timestep)
-        # some percent of birds die
-        open_territories = fns.locate_dead_birds(num_loc=num_deaths,
-                                                 matrix_dim=dim)
-        new_props = []
+        c = 0
+        print('\ntimestep', timestep)
+        # some percent of birds die, find their grid location
+        open_territories = fns.locate_dead_birds(ordered_pairs=all_coord,
+                                                 num_loc=num_deaths)
+        new_props = []  # list of learned syllable types (could be a new type)
         for bird in open_territories:
             # get new sylls for birds that will now occupy empty territories
             neighbor_sylls = fns.get_nearby_syllables(bird_matrix, bird[0],
                                                       bird[1], d=1)
 
-            # print(neighbor_sylls)
             new_props.append(fns.get_learned_syll(neighbor_sylls,
                                                   rule=params[0],
                                                   error_rate=params[1],
@@ -137,6 +142,7 @@ for run, params in runs.items():
             if new[1] == 'no':
                 pass
             else:
+                c += 1
                 # increase all syllables in bird_matrix by 1 if greater than or equal to invented syllable
                 bird_matrix[bird_matrix >= new[0]] = bird_matrix[bird_matrix >= new[0]] + 1
                 # must also increase the invented syllables by 1 if greater than the invented syllable
@@ -155,6 +161,8 @@ for run, params in runs.items():
 
                 # print('timestep', timestep, 'num sylls', len(prop_counts))
 
+        print('number of new syllables: ', c)
+
         # add new birds to the open territories (where old birds died)
         for bird, prop in zip(open_territories, [item[0] for item in new_props]):
             bird_matrix[bird[0], bird[1]] = prop
@@ -169,15 +177,14 @@ for run, params in runs.items():
             for i in samples:
                 sample_counts[i, timestep + 1] += 1
 
-        new_frame = ax.imshow(bird_matrix, cmap='gray')
+        # new_frame = ax.imshow(bird_matrix, cmap='gray')
+        #
+        # frames.append([new_frame])
 
-        frames.append([new_frame])
-
-    video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,
-                                      repeat_delay=1000)
-    if want_to_save:
-        video.save(video_name)
-
+    # video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,
+    #                                   repeat_delay=1000)
+    # if want_to_save:
+    #     video.save(video_name)
     plt.close()
 
     np.savetxt('init_counts.csv', init_counts, delimiter=",")
@@ -185,6 +192,3 @@ for run, params in runs.items():
     np.savetxt('sample_counts.csv', sample_counts, delimiter=",")
     np.savetxt('bird_counts.csv', bird_counts, delimiter=",")
     print("--- %s seconds ---" % (time.time() - start_time))
-
-    del(init_counts, prop_counts, sample_counts, bird_counts)
-

@@ -15,7 +15,7 @@ Load in counts from run
 
 home_path = 'C:/Users/abiga\Box ' \
             'Sync\Abigail_Nicole\ChippiesSyllableModel' \
-            '/RealYearlySamplingFreq/500DimMatrix/Neutral'
+            '/RealYearlySamplingFreq/Testing4_old/500DimMatrix'
 
 folders = glob(home_path + "/*/")
 

@@ -23,15 +23,20 @@ def count_type(prop_matrix, counts_array, step):
     return counts_array
 
 
-def locate_dead_birds(num_loc, matrix_dim):
-    loc_deaths = np.random.randint(0, matrix_dim, size=(num_loc, 2))  # by chance could get the same element twice
+def locate_dead_birds(ordered_pairs, num_loc):
+    np.random.shuffle(ordered_pairs)
+    loc_deaths = ordered_pairs[:num_loc]
+
     return loc_deaths
 
 
 def get_nearby_syllables(im, row, col, d=1):
     # does not wrap the boundaries (boundaries are real irl)
-    im = im.copy()
 
+    # store value of dead bird's syllable
+    dead_bird_syll = int(im[row, col])
+
+    # to determine indices for surrounding neighbor squares
     row_start = row - d
     row_end = row + d + 1
     col_start = col - d
@@ -46,15 +51,13 @@ def get_nearby_syllables(im, row, col, d=1):
     if col_end > len(im):
         col_end = len(im)
 
-    # set bird territory to non-syll value
-    im[row, col] = -1
-
     # get values of neighbors
-    n = im[row_start:row_end, col_start:col_end].flatten()
-    # remove syll of interest from list of neighboring sylls
-    values = n[n >= 0]
+    n = im[row_start:row_end, col_start:col_end].flatten().tolist()
 
-    return values
+    # remove syll of interest from list of neighboring sylls
+    n.remove(dead_bird_syll)  # only removes first matching element
+
+    return n
 
 
 def get_learned_syll(sylls_to_copy, rule='neutral', error_rate=None, direction=None):
@@ -89,9 +92,11 @@ def get_learned_syll(sylls_to_copy, rule='neutral', error_rate=None, direction=N
 
 
 def sample_birds(all_territories, sampling_num):
+    # get random matrix locations (x, y)
     loc_samples = np.random.randint(0, len(all_territories), size=(sampling_num, 2))  # by chance could get the same element twice
     sample_sylls = []
     for sample in loc_samples:
+        # get syllable type of the sampled bird
         sample_sylls.append(all_territories[sample[0], sample[1]])
 
     return sample_sylls
