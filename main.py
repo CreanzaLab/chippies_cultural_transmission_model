@@ -56,7 +56,7 @@ Cultural Transmission Model
 
 home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
-           '/RealYearlySamplingFreq/Testing4'
+           '/RealYearlySamplingFreq/Testing4_new'
 runs = {}
 model_type = 'neutral'
 direction = None

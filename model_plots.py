@@ -15,7 +15,7 @@ Load in counts from run
 
 home_path = 'C:/Users/abiga\Box ' \
             'Sync\Abigail_Nicole\ChippiesSyllableModel' \
-            '/RealYearlySamplingFreq/Testing3/500DimMatrix'
+            '/RealYearlySamplingFreq/Testing4_new/500DimMatrix'
 
 folders = glob(home_path + "/*/")
 
@@ -235,6 +235,41 @@ for f in folders:
         plt.close()
 
 
+    # actual distribution (not sampled)
+
+    my_dpi = 96
+    sns.set(style='white')
+    sns.set_context({"figure.figsize": (20, 7)})
+    plt.figure(6)
+
+    num_syll_types = np.sum(actual_counts > 0)
+    bin_count_syll_types = np.bincount(actual_counts)[1:]  # don't plot syllables that never existed
+
+    count_binned = [bin_count_syll_types[n:n + 1000] for n in range(0, len(bin_count_syll_types), 1000)]
+    count_binned = [np.sum(count_binned[i]) for i in range(0, len(count_binned))]
+
+    x = np.arange(len(count_binned))
+    y = count_binned / num_syll_types
+
+    plt.bar(x, y)
+    plt.title('After 1950: ' + ' total number of syll types: ' + str(
+        num_syll_types))
+    plt.xlabel('number of birds with a syllable type')
+    plt.ylabel('fraction of syllable types')
+    # plt.xlim(0, 45)
+    # plt.xticks(range(1, 201))
+    plt.ylim(0, 1)
+
+    if save_plots:
+        plt.tight_layout()
+        plt.savefig(
+            "num_sylls_with_num_birds_67yrs_actual"
+            + '.pdf', type='pdf', bbox_inches='tight',
+            transparent=True)
+        plt.close()
+    else:
+        plt.show()
+        plt.close()
 
 
 
