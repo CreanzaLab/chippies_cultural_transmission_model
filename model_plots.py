@@ -184,6 +184,7 @@ for f in folders:
 
     count_binned = [num_sylls[n:n + 1000] for n in range(0, len(num_sylls), 1000)]
     count_binned = [np.sum(count_binned[i]) for i in range(0, len(count_binned))]
+    print(count_binned)
 
     x = np.arange(len(count_binned))
     y = np.asarray(count_binned)/total_sylls

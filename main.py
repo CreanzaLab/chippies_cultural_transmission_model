@@ -93,19 +93,19 @@ for run, params in runs.items():
     num_deaths = int(mortality_rate*total_territories)
 
     # initialize figure for video frames
-    # want_to_save = False
-    # video_name = run + '.mp4'
-    # dpi = 100
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111)
-    # ax.set_aspect('equal')
-    # ax.get_xaxis().set_visible(False)
-    # ax.get_yaxis().set_visible(False)
-    #
-    # frame = ax.imshow(bird_matrix, cmap='gray')
-    # # cbar = fig.colorbar(frame)
-    # fig.set_size_inches([5, 5])
-    # frames = [[frame]]
+    want_to_save = True
+    video_name = run + '.mp4'
+    dpi = 100
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_aspect('equal')
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    frame = ax.imshow(bird_matrix, cmap='gray')
+    # cbar = fig.colorbar(frame)
+    fig.set_size_inches([5, 5])
+    frames = [[frame]]
 
     prop_counts = init_counts
     bird_counts = init_counts
@@ -116,8 +116,8 @@ for run, params in runs.items():
     # for i in samples:
     #     sample_counts[i, 0] += 1
 
+    c = 0
     for timestep in range(iterations):
-        c = 0
         print('\ntimestep', timestep)
         # some percent of birds die, find their grid location
         open_territories = fns.locate_dead_birds(ordered_pairs=all_coord,
@@ -177,14 +177,14 @@ for run, params in runs.items():
             for i in samples:
                 sample_counts[i, timestep + 1] += 1
 
-        # new_frame = ax.imshow(bird_matrix, cmap='gray')
-        #
-        # frames.append([new_frame])
+        new_frame = ax.imshow(bird_matrix, cmap='gray')
 
-    # video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,
-    #                                   repeat_delay=1000)
-    # if want_to_save:
-    #     video.save(video_name)
+        frames.append([new_frame])
+
+    video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,
+                                      repeat_delay=1000)
+    if want_to_save:
+        video.save(video_name)
     plt.close()
 
     np.savetxt('init_counts.csv', init_counts, delimiter=",")
