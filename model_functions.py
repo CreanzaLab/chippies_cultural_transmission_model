@@ -2,7 +2,7 @@ import numpy as np
 
 
 def initiate(min_int, max_int, dim1, total_steps):
-    np.random.seed(49)
+    np.random.seed(236)
     # populate each element (territory) with a random bird (syllable type)
     # low (inclusive), high(exclusive), discrete uniform distribution
     bird_matrix = np.random.randint(min_int, max_int, [dim1, dim1],
