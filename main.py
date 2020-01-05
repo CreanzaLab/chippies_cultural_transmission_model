@@ -122,6 +122,36 @@ for run, params in runs.items():
 
     for timestep in range(iterations):
         print('\ntimestep', timestep)
+
+        uniq_sylls, num_birds_w_syll = np.unique(bird_matrix,
+                                                 return_counts=True)
+        num_unique_sylls_in_matrix = len(uniq_sylls)
+        bin_count_num_birds = np.bincount(num_birds_w_syll)
+        count_binned = [bin_count_num_birds[n:n + 100] for n in
+                        range(0, len(bin_count_num_birds), 100)]
+        count_binned = [np.sum(count_binned[i]) for i in
+                        range(0, len(count_binned))]
+        y = count_binned.copy()
+        x = np.arange(len(y))
+
+        my_dpi = 96
+        sns.set(style='white')
+        sns.set_context({"figure.figsize": (20, 7)})
+        plt.figure()
+
+        plt.bar(x, y)
+        plt.title('number unique syllables at time ' + str(timestep) + ': '
+                  + str(num_unique_sylls_in_matrix))
+        plt.xlabel('no. birds singing a syllable (x1000')
+        plt.ylabel('no. of syllable types')
+
+        plt.tight_layout()
+        plt.savefig(
+            "dist_bird_in_matrix_" + str(timestep)
+            + '.pdf', type='pdf', bbox_inches='tight',
+            transparent=True)
+        plt.close()
+
         # some percent of birds die, find their grid location
         open_territories = fns.locate_dead_birds(ordered_pairs=all_coord,
                                                  num_loc=num_deaths)
@@ -177,7 +207,7 @@ for run, params in runs.items():
             current_bps = fns.count_type(bird_matrix, vector_size)
             actual_lifetimes[current_bps > 0] += 1
 
-        new_frame = ax.imshow(bird_matrix, cmap='gray')
+        new_frame = ax.imshow(bird_matrix, cmap='gray', vmin=0, vmax=6000)
 
         frames.append([new_frame])
 
