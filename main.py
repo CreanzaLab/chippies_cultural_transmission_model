@@ -163,12 +163,13 @@ for run, params in runs.items():
                                                   error_rate=params[1],
                                                   direction=params[2]))
 
-        # before adding new birds, shift syllable values (bird matrix and prop count) to make room for invented syllables
-        unique_props = [list(x) for x in set(tuple(x) for x in new_props)]
+        print(np.count_nonzero(np.asarray(new_props)[:, 1] != 'no'))
+
         # print(new_props)
-        # print('unique props', unique_props)
-        for new in unique_props:
+        # before adding new birds, shift syllable values (bird matrix and prop count) to make room for invented syllables
+        for indx in range(len(new_props)):
             # print('item in unique props', new)
+            new = new_props[indx]
             if new[1] == 'no':
                 pass
             else:
@@ -177,12 +178,11 @@ for run, params in runs.items():
                 bird_matrix[bird_matrix >= new[0]] = bird_matrix[bird_matrix >= new[0]] + 1
                 # must also increase the invented syllables by 1 if greater than the invented syllable
                 # this has to be done on both the full and unique lists
-                for item in unique_props:
-                    if item[0] > new[0]:
-                        item[0] = item[0] + 1
-                for item in new_props:
-                    if item[0] > new[0]:
-                        item[0] = item[0] + 1
+                for indx_2 in range(len(new_props)):
+                    if indx_2 == indx:
+                        pass
+                    elif new_props[indx_2][0] >= new[0]:
+                        new_props[indx_2][0] = new_props[indx_2][0] + 1
 
                 # add row of zeros into the count matrix for each invented syllable (row # is the syllable #)
                 prop_counts = np.insert(prop_counts, new[0], np.zeros(prop_counts.shape[1]), axis=0)
