@@ -22,10 +22,9 @@ chippies = pd.read_csv("C:/Users/abiga\Box "
                        "\AnimalBehaviour_SupplementalDataTable2_addedMid.csv")
 
 yrs_freq = chippies.RecordingYear.value_counts().sort_index().reindex(range(
-    1918, 2018, 1)).fillna(0)
+    1950, 2018, 1)).fillna(0)
 
 sample_freq = yrs_freq.to_numpy(dtype='int')
-
 
 """
 Cultural Transmission Model
@@ -61,24 +60,25 @@ runs = {}
 model_type = 'neutral'
 direction = None
 
-iterations = 100
-low_prop = 0
-high_prop = 100
+iterations = 1000
 dim = 500
+low_prop = 0
+high_prop = int(dim**2/500)
 mortality_rate = 0.4
 num_syll_types = high_prop
-num_samples = 68  # must be less than iterations, 68 comes from 2017-1950 (dates we have data from)
+num_samples = len(sample_freq)
 
 # get list of all coordinate pairs of matrix
 all_coord = list(itertools.product(range(0, dim), range(0, dim)))
 
 # setup runs with various parameters
-for p in np.arange(0.05, 0.051, 0.01):
+for p in np.arange(0.001, 0.0015, 0.001):
     file_name = model_type + '_' \
                 + str(p) + 'error_' \
                 + str(int(mortality_rate*100)) + 'mortality_' \
                 + str(iterations) + 'iters_' \
-                + str(dim) + 'dim'
+                + str(dim) + 'dim_' \
+                + str(high_prop) + 'initialSylls'
     runs.update({file_name: [model_type, p/100, direction]})
 
 # iterate through each of the runs, each with unique parameters
@@ -127,8 +127,8 @@ for run, params in runs.items():
                                                  return_counts=True)
         num_unique_sylls_in_matrix = len(uniq_sylls)
         bin_count_num_birds = np.bincount(num_birds_w_syll)
-        count_binned = [bin_count_num_birds[n:n + 100] for n in
-                        range(0, len(bin_count_num_birds), 100)]
+        count_binned = [bin_count_num_birds[n:n + 10] for n in
+                        range(0, len(bin_count_num_birds), 10)]
         count_binned = [np.sum(count_binned[i]) for i in
                         range(0, len(count_binned))]
         y = count_binned.copy()
@@ -142,7 +142,7 @@ for run, params in runs.items():
         plt.bar(x, y)
         plt.title('number unique syllables at time ' + str(timestep) + ': '
                   + str(num_unique_sylls_in_matrix))
-        plt.xlabel('no. birds singing a syllable (x1000')
+        plt.xlabel('no. birds singing a syllable (x10)')
         plt.ylabel('no. of syllable types')
 
         plt.tight_layout()
@@ -185,7 +185,8 @@ for run, params in runs.items():
         # sample the birds at this timestep (don't need to sample before 1950)
         if timestep >= iterations - num_samples:
             # sampling
-            samples = fns.sample_birds(bird_matrix, sample_freq[timestep])
+            samples = fns.sample_birds(bird_matrix,
+                                       sample_freq[timestep-(iterations-num_samples)])
 
             # updating information based on sample
             # number of sampled birds with a syllable type

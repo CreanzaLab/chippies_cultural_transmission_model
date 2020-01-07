@@ -15,7 +15,8 @@ Load in counts from run
 
 home_path = 'C:/Users/abiga\Box ' \
             'Sync\Abigail_Nicole\ChippiesSyllableModel' \
-            '/RealYearlySamplingFreq/Testing4_new/500DimMatrix'
+            '/RealYearlySamplingFreq/Testing4_new/500DimMatrix' \
+            '/EstablishedEquilibrium'
 
 folders = glob(home_path + "/*/")
 
@@ -44,11 +45,8 @@ for f in folders:
     sample_counts = np.genfromtxt('sampled_birds_with_syllables.csv',
                                   dtype='int32', delimiter=',')
 
-    print('total number of syllable types: ', np.sum(actual_lifetimes > 0))
     print('total number of syllable types: ', np.sum(actual_counts > 0))
 
-    print('(sampled) total number of syllable types: ', np.sum(
-        sampled_lifetimes > 0))
     print('(sampled) total number of syllable types: ', np.sum(
         sample_counts > 0))
 
@@ -148,7 +146,7 @@ for f in folders:
     if save_plots:
         plt.tight_layout()
         plt.savefig(
-            "num_sylls_with_lifespan_67yrs"
+            "num_sylls_with_lifespan_sampled"
             + '.pdf', type='pdf', bbox_inches='tight',
             transparent=True)
         plt.close()
@@ -197,7 +195,6 @@ for f in folders:
     #     plt.close()
 
 
-    # x = number of birds singing a syll type, y = number of syllable types
     my_dpi = 96
     sns.set(style='white')
     sns.set_context({"figure.figsize": (20, 7)})
@@ -208,12 +205,6 @@ for f in folders:
     x = np.arange(len(bin_count_syll_types))
     y = bin_count_syll_types/num_syll_types
 
-
-    # dataset = np.sum(sample_counts[:, 33:], axis=1)
-    # total_sylls = np.count_nonzero(dataset)
-    # num_syll_types = np.bincount(dataset)
-    # x = np.arange(len(num_syll_types))
-    # y = num_syll_types/total_sylls
     plt.bar(x[1:], y[1:])
     plt.title('Sampled: ' + ' total number of syll types: ' + str(
         num_syll_types))
@@ -226,7 +217,7 @@ for f in folders:
     if save_plots:
         plt.tight_layout()
         plt.savefig(
-            "num_sylls_with_num_birds_67yrs"
+            "num_sylls_with_num_birds_sampled"
             + '.pdf', type='pdf', bbox_inches='tight',
             transparent=True)
         plt.close()
@@ -243,12 +234,10 @@ for f in folders:
     plt.figure(6)
 
     num_syll_types = np.sum(actual_counts > 0)
-    print(num_syll_types)
     bin_count_syll_types = np.bincount(actual_counts)[1:]  # don't plot syllables that never existed
 
-    count_binned = [bin_count_syll_types[n:n + 1000] for n in range(0, len(bin_count_syll_types), 1000)]
+    count_binned = [bin_count_syll_types[n:n + 10] for n in range(0, len(bin_count_syll_types), 10)]
     count_binned = [np.sum(count_binned[i]) for i in range(0, len(count_binned))]
-    print(count_binned)
 
     x = np.arange(len(count_binned))
     y = count_binned / num_syll_types
@@ -256,7 +245,7 @@ for f in folders:
     plt.bar(x, y)
     plt.title('After 1950: ' + ' total number of syll types: ' + str(
         num_syll_types))
-    plt.xlabel('number of birds with a syllable type')
+    plt.xlabel('number of birds with a syllable type (x10)')
     plt.ylabel('fraction of syllable types')
     # plt.xlim(0, 45)
     # plt.xticks(range(1, 201))
@@ -265,7 +254,7 @@ for f in folders:
     if save_plots:
         plt.tight_layout()
         plt.savefig(
-            "num_sylls_with_num_birds_67yrs_actual"
+            "num_sylls_with_num_birds_actual"
             + '.pdf', type='pdf', bbox_inches='tight',
             transparent=True)
         plt.close()
