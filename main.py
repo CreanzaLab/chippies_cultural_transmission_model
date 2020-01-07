@@ -29,30 +29,8 @@ sample_freq = yrs_freq.to_numpy(dtype='int')
 """
 Cultural Transmission Model
 """
-# runs = {'Neutral_0error_40mortality_100iters_100dim':
-#             ['neutral', None, None]}
-# runs = {'Neutral_0.01error_40mortality_100iters_100dim':
-#             ['neutral', 0.0001, None]}
-# runs = {'Neutral_0.05error_40mortality_100iters_100dim':
-#             ['neutral', 0.0005, None]}
-# runs = {'Neutral_0.25error_40mortality_100iters_100dim':
-#             ['neutral', 0.0025, None]}
-# runs = {'Neutral_0.5error_40mortality_100iters_100dim':
-#             ['neutral', 0.005, None]}
-# runs = {'Neutral_0.1error_40mortality_100iters_100dim':
-#             ['neutral', 0.001, None]}
-# runs = {'Neutral_1error_40mortality_100iters_100dim':
-#             ['neutral', 0.01, None]}
-# runs = {'Conformity_0error_40mortality_100iters_100dim':
-#         ['conformity', None, None]}
-# runs = {'Conformity_0.5error_40mortality_100iters_100dim':
-#         ['conformity', 0.005, None]}
-# runs = {'Conformity_0.1error_40mortality_100iters_100dim':
-#         ['conformity', 0.001, None]}
-# runs = {'Conformity_1error_40mortality_100iters_100dim':
-#             ['conformity', 0.01, None]}
-
-
+save_video = True
+save_pdfs = True
 home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
            '/RealYearlySamplingFreq/Testing4_new'
@@ -106,51 +84,52 @@ for run, params in runs.items():
     bird_counts_t0 = current_bps.copy()
 
     # initialize figure for video frames
-    want_to_save = True
-    video_name = run + '.mp4'
-    dpi = 100
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.set_aspect('equal')
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
+    if save_video:
+        video_name = run + '.mp4'
+        dpi = 100
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.set_aspect('equal')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
 
-    frame = ax.imshow(bird_matrix, cmap='gray')
-    # cbar = fig.colorbar(frame)
-    fig.set_size_inches([5, 5])
-    frames = [[frame]]
+        frame = ax.imshow(bird_matrix, cmap='gray')
+        # cbar = fig.colorbar(frame)
+        fig.set_size_inches([5, 5])
+        frames = [[frame]]
 
     for timestep in range(iterations):
         print('\ntimestep', timestep)
 
-        uniq_sylls, num_birds_w_syll = np.unique(bird_matrix,
-                                                 return_counts=True)
-        num_unique_sylls_in_matrix = len(uniq_sylls)
-        bin_count_num_birds = np.bincount(num_birds_w_syll)
-        count_binned = [bin_count_num_birds[n:n + 10] for n in
-                        range(0, len(bin_count_num_birds), 10)]
-        count_binned = [np.sum(count_binned[i]) for i in
-                        range(0, len(count_binned))]
-        y = count_binned.copy()
-        x = np.arange(len(y))
+        if save_pdfs:
+            uniq_sylls, num_birds_w_syll = np.unique(bird_matrix,
+                                                     return_counts=True)
+            num_unique_sylls_in_matrix = len(uniq_sylls)
+            bin_count_num_birds = np.bincount(num_birds_w_syll)
+            count_binned = [bin_count_num_birds[n:n + 10] for n in
+                            range(0, len(bin_count_num_birds), 10)]
+            count_binned = [np.sum(count_binned[i]) for i in
+                            range(0, len(count_binned))]
+            y = count_binned.copy()
+            x = np.arange(len(y))
 
-        my_dpi = 96
-        sns.set(style='white')
-        sns.set_context({"figure.figsize": (20, 7)})
-        plt.figure()
+            my_dpi = 96
+            sns.set(style='white')
+            sns.set_context({"figure.figsize": (20, 7)})
+            plt.figure()
 
-        plt.bar(x, y)
-        plt.title('number unique syllables at time ' + str(timestep) + ': '
-                  + str(num_unique_sylls_in_matrix))
-        plt.xlabel('no. birds singing a syllable (x10)')
-        plt.ylabel('no. of syllable types')
+            plt.bar(x, y)
+            plt.title('number unique syllables at time ' + str(timestep) + ': '
+                      + str(num_unique_sylls_in_matrix))
+            plt.xlabel('no. birds singing a syllable (x10)')
+            plt.ylabel('no. of syllable types')
 
-        plt.tight_layout()
-        plt.savefig(
-            "dist_bird_in_matrix_" + str(timestep)
-            + '.pdf', type='pdf', bbox_inches='tight',
-            transparent=True)
-        plt.close()
+            plt.tight_layout()
+            plt.savefig(
+                "dist_bird_in_matrix_" + str(timestep)
+                + '.pdf', type='pdf', bbox_inches='tight',
+                transparent=True)
+            plt.close()
 
         # some percent of birds die, find their grid location
         open_territories = fns.locate_dead_birds(ordered_pairs=all_coord,
@@ -208,15 +187,15 @@ for run, params in runs.items():
             current_bps = fns.count_type(bird_matrix, vector_size)
             actual_lifetimes[current_bps > 0] += 1
 
-        new_frame = ax.imshow(bird_matrix, cmap='gray', vmin=0, vmax=6000)
+        if save_video:
+            new_frame = ax.imshow(bird_matrix, cmap='gray', vmin=0, vmax=6000)
+            frames.append([new_frame])
 
-        frames.append([new_frame])
-
-    video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,
-                                      repeat_delay=1000)
-    if want_to_save:
+    if save_video:
+        video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,
+                                          repeat_delay=1000)
         video.save(video_name)
-    plt.close()
+        plt.close()
 
     # calculate lifespan of sampled syllables
     sampled_lifetimes = last_sampled - first_sampled

@@ -74,9 +74,6 @@ def get_nearby_syllables(im, row, col, d=1):
 def get_learned_syll(sylls_to_copy, num_sylls, rule='neutral',
                      error_rate=None, direction=None):
 
-    # if np.random.random() < error_rate:
-    #     new_syll = num_sylls + 1
-    #     num_sylls += 1
     if rule == 'neutral':  # a random nearby song
         new_syll = np.random.choice(sylls_to_copy)
     elif rule == 'conformity':  # most common value heard nearby, randomly chooses from ties
