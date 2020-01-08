@@ -15,7 +15,7 @@ def initiate(min_type, max_type, min_rate, max_rate, dim1, vector_size):
     # assign a random syllable rate to each bird (territory)
     # low (inclusive), high(exclusive), continuous uniform distribution
     # rate_matrix = np.random.uniform(min_rate, max_rate, size=[dim1, dim1])
-    mu, sigma = np.mean([min_rate, max_rate]), 1
+    mu, sigma = np.mean([min_rate, max_rate]), 5
     rate_matrix = truncnorm.rvs((min_rate - mu)/sigma,
                                 (max_rate - mu)/sigma,
                                 loc=mu, scale=sigma,
