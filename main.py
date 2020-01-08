@@ -37,7 +37,7 @@ home_dir = 'C:/Users/abiga\Box ' \
 runs = {}
 model_type = 'neutral'
 
-iterations = 10
+iterations = 1000
 dim = 500
 
 mortality_rate = 0.4
@@ -165,10 +165,11 @@ for run, params in runs.items():
                 learned_rates.append(new_rate)
 
         # add new birds to the open territories (where old birds died)
-        for bird, syll, rate in zip(open_territories,
-                                    learned_types,
-                                    learned_rates):
-
+        for bird, syll, rate in itertools.zip_longest(open_territories,
+                                                      learned_types,
+                                                      learned_rates,
+                                                      fillvalue=None):
+            print('for bird')
             bird_matrix[bird[0], bird[1]] = syll
 
             if model_type == 'directional':
