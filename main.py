@@ -35,16 +35,16 @@ home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
            '/RealYearlySamplingFreq/Testing4_new'
 runs = {}
-model_type = 'neutral'
+model_type = 'directional'
 
 iterations = 1000
 dim = 500
 
 mortality_rate = 0.4
-low_syll_type = 0
+low_syll_type = int(0)
 high_syll_type = int(dim ** 2 / 500)
-low_syll_rate = 5  # units of syllables/second
-high_syll_rate = 40  # units of syllables/second
+low_syll_rate = float(5)  # units of syllables/second
+high_syll_rate = float(40)  # units of syllables/second
 
 num_syll_types = high_syll_type
 num_samples = len(sample_freq)
@@ -102,38 +102,20 @@ for run, params in runs.items():
         fig.set_size_inches([5, 5])
         frames = [[frame]]
 
+    if save_pdfs:
+        fns.plot_type_distributions(bird_matrix, t=0)
+
+        if model_type == 'directional':
+            fns.plot_rates_distributions(rate_matrix, t=0)
+
     for timestep in range(iterations):
         print('\ntimestep', timestep)
 
-        if save_pdfs:
-            uniq_sylls, num_birds_w_syll = np.unique(bird_matrix,
-                                                     return_counts=True)
-            num_unique_sylls_in_matrix = len(uniq_sylls)
-            bin_count_num_birds = np.bincount(num_birds_w_syll)
-            count_binned = [bin_count_num_birds[n:n + 10] for n in
-                            range(0, len(bin_count_num_birds), 10)]
-            count_binned = [np.sum(count_binned[i]) for i in
-                            range(0, len(count_binned))]
-            y = count_binned.copy()
-            x = np.arange(len(y))
+        if save_pdfs and (timestep % 10 == 9):
+            fns.plot_type_distributions(bird_matrix, timestep)
 
-            my_dpi = 96
-            sns.set(style='white')
-            sns.set_context({"figure.figsize": (20, 7)})
-            plt.figure()
-
-            plt.bar(x, y)
-            plt.title('number unique syllables at time ' + str(timestep) + ': '
-                      + str(num_unique_sylls_in_matrix))
-            plt.xlabel('no. birds singing a syllable (x10)')
-            plt.ylabel('no. of syllable types')
-
-            plt.tight_layout()
-            plt.savefig(
-                "dist_bird_in_matrix_" + str(timestep)
-                + '.pdf', type='pdf', bbox_inches='tight',
-                transparent=True)
-            plt.close()
+            if model_type == 'directional':
+                fns.plot_rates_distributions(rate_matrix, timestep)
 
         # some percent of birds die, find their grid location
         open_territories = fns.locate_dead_birds(ordered_pairs=all_coord,
@@ -154,12 +136,17 @@ for run, params in runs.items():
 
             elif model_type == 'directional':
                 neighbor_sylls, neighbor_rates = \
-                    fns.get_nearby_sylls_and_rates(bird_matrix, bird[0],
-                                                   bird[1], d=1)
+                    fns.get_nearby_sylls_and_rates(bird_matrix,
+                                                   rate_matrix,
+                                                   bird[0],
+                                                   bird[1],
+                                                   d=1)
 
-                new_type, new_rate, num_syll_types = fns.get_learned_syll(
-                    neighbor_sylls, neighbor_rates, num_syll_types,
-                    error_rate=params[1])
+                new_type, new_rate, num_syll_types = \
+                    fns.get_learned_syll_and_rate(neighbor_sylls,
+                                                  neighbor_rates,
+                                                  num_syll_types,
+                                                  error_rate=params[1])
 
                 learned_types.append(new_type)
                 learned_rates.append(new_rate)
@@ -169,7 +156,6 @@ for run, params in runs.items():
                                                       learned_types,
                                                       learned_rates,
                                                       fillvalue=None):
-            print('for bird')
             bird_matrix[bird[0], bird[1]] = syll
 
             if model_type == 'directional':

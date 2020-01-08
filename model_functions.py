@@ -1,5 +1,10 @@
 import numpy as np
-
+from scipy.stats import truncnorm
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+import seaborn as sns; sns.set()
 
 def initiate(min_type, max_type, min_rate, max_rate, dim1, vector_size):
     np.random.seed(49)
@@ -9,7 +14,12 @@ def initiate(min_type, max_type, min_rate, max_rate, dim1, vector_size):
                                     dtype='int')
     # assign a random syllable rate to each bird (territory)
     # low (inclusive), high(exclusive), continuous uniform distribution
-    rate_matrix = np.random.uniform(min_rate, max_rate, size=[dim1, dim1])
+    # rate_matrix = np.random.uniform(min_rate, max_rate, size=[dim1, dim1])
+    mu, sigma = np.mean([min_rate, max_rate]), 1
+    rate_matrix = truncnorm.rvs((min_rate - mu)/sigma,
+                                (max_rate - mu)/sigma,
+                                loc=mu, scale=sigma,
+                                size=[dim1, dim1],)
 
     # initiate vectors for tracking info about entire population
     current_bps = np.zeros(vector_size, dtype='int')  # no. birds per syllable at one time step
@@ -140,8 +150,12 @@ def get_learned_syll_and_rate(sylls_to_copy, rates_to_copy, num_sylls,
 
     # get random error for for how well the bird learned a slower or faster
     # rate than the tutor's rate
-    rate_error = np.random.uniform(-1, 0.5)
+    rate_error = np.random.uniform(-2, 0.25)
     new_syll_rate += rate_error
+    if new_syll_rate > 40:
+        new_syll_rate = float(40)
+    elif new_syll_rate < 1:
+        new_syll_rate = float(1)
 
     return new_syll_type, new_syll_rate, num_sylls
 
@@ -155,3 +169,80 @@ def sample_birds(all_territories, sampling_num):
         sample_sylls.append(all_territories[sample[0], sample[1]])
 
     return sample_sylls
+
+
+def plot_type_distributions(types_matrix, t, bin_size=10):
+    uniq_sylls, num_birds_w_syll = np.unique(types_matrix,
+                                             return_counts=True)
+    num_unique_sylls_in_matrix = len(uniq_sylls)
+    bin_count_num_birds = np.bincount(num_birds_w_syll)
+    count_binned = [bin_count_num_birds[n:n + bin_size] for n in
+                    range(0, len(bin_count_num_birds), bin_size)]
+    count_binned = [np.sum(count_binned[i]) for i in
+                    range(0, len(count_binned))]
+
+    y = count_binned.copy()
+    x = np.arange(len(y))
+
+    b = y.copy()
+    a = x.copy() / np.sum(num_birds_w_syll) * bin_size * 100
+
+    # raw bird counts
+    my_dpi = 96
+    sns.set(style='white')
+    sns.set_context({"figure.figsize": (20, 7)})
+    plt.figure()
+
+    plt.bar(x, y)
+    plt.title('number unique syllables at time ' + str(t) + ': '
+              + str(num_unique_sylls_in_matrix))
+    plt.xlabel('no. birds singing a syllable x' + str(bin_size))
+    plt.ylabel('no. of syllable types')
+
+    plt.tight_layout()
+    plt.savefig(
+        "dist_bird_in_matrix_" + str(t)
+        + '.pdf', type='pdf', bbox_inches='tight',
+        transparent=True)
+    plt.close()
+
+    # percent of population
+    my_dpi = 96
+    sns.set(style='white')
+    sns.set_context({"figure.figsize": (20, 7)})
+    plt.figure()
+
+    plt.bar(a, b, width=0.003)
+    plt.title('number unique syllables at time ' + str(t) + ': '
+              + str(num_unique_sylls_in_matrix))
+    plt.xlabel('percent of birds singing a syllable')
+    plt.ylabel('no. of syllable types')
+    # plt.xticks(rotation=90)
+
+    plt.tight_layout()
+    plt.savefig(
+        "percent_bird_in_matrix_" + str(t)
+        + '.pdf', type='pdf', bbox_inches='tight',
+        transparent=True)
+    plt.close()
+
+
+def plot_rates_distributions(rates_matrix, t, bin_size=10):
+    # percent of population
+    my_dpi = 96
+    sns.set(style='white')
+    sns.set_context({"figure.figsize": (20, 7)})
+    plt.figure()
+
+    plt.hist(rates_matrix.flatten())
+    plt.title('time ' + str(t))
+    plt.xlabel('rate (syllables/seconds)')
+    plt.ylabel('number of birds with rate')
+    # plt.xticks(rotation=90)
+
+    plt.tight_layout()
+    plt.savefig(
+        "syll_rates_in_matrix_" + str(t)
+        + '.pdf', type='pdf', bbox_inches='tight',
+        transparent=True)
+    plt.close()
