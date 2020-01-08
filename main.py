@@ -36,28 +36,31 @@ home_dir = 'C:/Users/abiga\Box ' \
            '/RealYearlySamplingFreq/Testing4_new'
 runs = {}
 model_type = 'neutral'
-direction = None
 
-iterations = 1000
+iterations = 10
 dim = 500
-low_prop = 0
-high_prop = int(dim**2/500)
+
 mortality_rate = 0.4
-num_syll_types = high_prop
+low_syll_type = 0
+high_syll_type = int(dim ** 2 / 500)
+low_syll_rate = 5  # units of syllables/second
+high_syll_rate = 40  # units of syllables/second
+
+num_syll_types = high_syll_type
 num_samples = len(sample_freq)
 
 # get list of all coordinate pairs of matrix
 all_coord = list(itertools.product(range(0, dim), range(0, dim)))
 
 # setup runs with various parameters
-for p in np.arange(0.001, 0.0015, 0.001):
+for p in np.arange(0.05, 0.051, 0.01):
     file_name = model_type + '_' \
                 + str(p) + 'error_' \
                 + str(int(mortality_rate*100)) + 'mortality_' \
                 + str(iterations) + 'iters_' \
                 + str(dim) + 'dim_' \
-                + str(high_prop) + 'initialSylls'
-    runs.update({file_name: [model_type, p/100, direction]})
+                + str(high_syll_type) + 'initialSylls'
+    runs.update({file_name: [model_type, p/100]})
 
 # iterate through each of the runs, each with unique parameters
 for run, params in runs.items():
@@ -75,9 +78,10 @@ for run, params in runs.items():
                   mortality_rate * 10)
 
     # initialize the first set of birds
-    bird_matrix, current_bps, actual_lifetimes, unique_bps, sample_bps, \
-        sample_unique_bps, first_sampled, last_sampled = \
-        fns.initiate(low_prop, high_prop, dim, iterations, vector_size)
+    bird_matrix, rate_matrix, current_bps, actual_lifetimes, unique_bps, \
+        sample_bps, sample_unique_bps, first_sampled, last_sampled = \
+        fns.initiate(low_syll_type, high_syll_type, low_syll_rate,
+                     high_syll_rate, dim, vector_size)
 
     # find number of birds that have each syllable type, save initial state
     current_bps = fns.count_type(bird_matrix, vector_size)
@@ -134,27 +138,46 @@ for run, params in runs.items():
         # some percent of birds die, find their grid location
         open_territories = fns.locate_dead_birds(ordered_pairs=all_coord,
                                                  num_loc=num_deaths)
-        new_props = []  # list of learned syllable types (could be a new type)
+        learned_types = []  # list of learned syllable types (could be a new type)
+        learned_rates = []  # list of learned syllable types (could be a new type)
         for bird in open_territories:
-            # get new sylls for birds that will now occupy empty territories
-            neighbor_sylls = fns.get_nearby_syllables(bird_matrix, bird[0],
-                                                      bird[1], d=1)
+            if (model_type == 'neutral') or (model_type == 'conformity'):
+                # get new sylls for birds that will now occupy empty territories
+                neighbor_sylls = fns.get_nearby_sylls(bird_matrix,
+                                                      bird[0], bird[1],
+                                                      d=1)
 
-            new_syll, num_syll_types = fns.get_learned_syll(neighbor_sylls,
-                                                            num_syll_types,
-                                                            rule=params[0],
-                                                            error_rate=params[1],
-                                                            direction=params[2])
+                new_type, num_syll_types = fns.get_learned_syll(
+                    neighbor_sylls, num_syll_types, rule=params[0],
+                    error_rate=params[1])
+                learned_types.append(new_type)
 
-            new_props.append(new_syll)
+            elif model_type == 'directional':
+                neighbor_sylls, neighbor_rates = \
+                    fns.get_nearby_sylls_and_rates(bird_matrix, bird[0],
+                                                   bird[1], d=1)
+
+                new_type, new_rate, num_syll_types = fns.get_learned_syll(
+                    neighbor_sylls, neighbor_rates, num_syll_types,
+                    error_rate=params[1])
+
+                learned_types.append(new_type)
+                learned_rates.append(new_rate)
 
         # add new birds to the open territories (where old birds died)
-        for bird, prop in zip(open_territories, new_props):
-            bird_matrix[bird[0], bird[1]] = prop
+        for bird, syll, rate in zip(open_territories,
+                                    learned_types,
+                                    learned_rates):
+
+            bird_matrix[bird[0], bird[1]] = syll
+
+            if model_type == 'directional':
+                rate_matrix[bird[0], bird[1]] = rate
+
             # after the first timestep in which we sample, increment the
             # number of birds with a syllable type for each new bird
             if timestep > iterations - num_samples:
-                unique_bps[prop] += 1
+                unique_bps[syll] += 1
 
         # when the timestep is the first year to sample, initiate unique_bps
         if timestep == iterations - num_samples:
