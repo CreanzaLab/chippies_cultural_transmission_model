@@ -35,13 +35,14 @@ home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
            '/RealYearlySamplingFreq/Testing4_new'
 runs = {}
-model_type = 'directional'
+model_type = 'conformity'
+conformity_factor = 2
 
 iterations = 1000
 dim = 500
 
 mortality_rate = 0.4
-low_syll_type = int(0)
+low_syll_type = int(0)  # should not change
 high_syll_type = int(dim ** 2 / 500)
 low_syll_rate = float(5)  # units of syllables/second
 high_syll_rate = float(40)  # units of syllables/second
@@ -53,7 +54,7 @@ num_samples = len(sample_freq)
 all_coord = list(itertools.product(range(0, dim), range(0, dim)))
 
 # setup runs with various parameters
-for p in np.arange(0.05, 0.051, 0.01):
+for p in np.arange(0.01, 0.051, 0.01):
     file_name = model_type + '_' \
                 + str(p) + 'error_' \
                 + str(int(mortality_rate*100)) + 'mortality_' \
@@ -66,7 +67,7 @@ for p in np.arange(0.05, 0.051, 0.01):
 for run, params in runs.items():
     print(run)
     start_time = time.time()
-    path = home_dir + '/' + str(dim) + 'DimMatrix/' + run + '/'
+    path = home_dir + '/' + str(dim) + 'DimMatrix/Conformity/' + run + '/'
     os.mkdir(path)
     os.chdir(path)
 
@@ -131,7 +132,7 @@ for run, params in runs.items():
 
                 new_type, num_syll_types = fns.get_learned_syll(
                     neighbor_sylls, num_syll_types, rule=params[0],
-                    error_rate=params[1])
+                    error_rate=params[1], conformity_factor=conformity_factor)
                 learned_types.append(new_type)
 
             elif model_type == 'directional':
