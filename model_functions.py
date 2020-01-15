@@ -122,16 +122,23 @@ def get_nearby_sylls_and_rates(matrix_1, matrix_2, row, col, d=1):
 
 
 def get_learned_syll(sylls_to_copy, num_sylls, rule='neutral',
-                     error_rate=None):
-
-    if rule == 'neutral':  # a random nearby song
-        new_syll_type = np.random.choice(sylls_to_copy)
-    elif rule == 'conformity':  # most common value heard nearby, randomly chooses from ties
-        new_syll_type = np.random.choice(np.where(np.bincount(sylls_to_copy) == np.bincount(sylls_to_copy).max())[0])
+                     error_rate=None, conformity_factor=1):
 
     if np.random.random() < error_rate:
         new_syll_type = num_sylls + 1  # re-invention is not possible, always a new syllable syll
         num_sylls += 1
+    elif rule == 'neutral':  # a random nearby song
+        new_syll_type = np.random.choice(sylls_to_copy)
+    elif rule == 'conformity':  # most common value heard nearby, randomly chooses from ties
+        nearby_uniques, nearby_counts = np.unique(sylls_to_copy,
+                                                  return_counts=True)
+        nearby_counts_scaled = (nearby_counts**conformity_factor).astype(int)
+        new_syll_type = np.random.choice(np.repeat(nearby_uniques,
+                                                   nearby_counts_scaled))
+        # new_syll_type = np.random.choice(nearby_uniques,
+        #                                  p=nearby_counts_scaled/np.sum(
+        #                                      nearby_counts_scaled))
+        # new_syll_type = np.random.choice(np.where(np.bincount(sylls_to_copy) == np.bincount(sylls_to_copy).max())[0])
 
     return new_syll_type, num_sylls
 
