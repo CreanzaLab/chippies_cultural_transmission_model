@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.rcParams['pdf.fonttype'] = 42
@@ -16,7 +17,7 @@ Load in counts from run
 home_path = 'C:/Users/abiga\Box ' \
             'Sync\Abigail_Nicole\ChippiesSyllableModel' \
             '/RealYearlySamplingFreq/Testing4_new/500DimMatrix' \
-            '/EstablishedEquilibrium'
+            '/ForDissertation'
 
 folders = glob(home_path + "/*/")
 
@@ -40,15 +41,20 @@ for f in folders:
                                      dtype='int32', delimiter=',')
     actual_counts = np.genfromtxt('unique_birds_with_syllables.csv',
                                   dtype='int32', delimiter=',')
-    sampled_lifetimes = np.genfromtxt('sampled_lifetimes.csv', dtype='int32',
-                                      delimiter=',')
-    sample_counts = np.genfromtxt('sampled_birds_with_syllables.csv',
-                                  dtype='int32', delimiter=',')
+    sampled_lifetimes = pd.read_csv('sampled_lifetimes.csv',
+                                      dtype='int32', delimiter=',',
+                                    header=None).to_numpy().transpose()[0]
+    print('loaded first', sampled_lifetimes.shape)
+    print(sampled_lifetimes[0:10])
+    sample_counts = pd.read_csv('sampled_birds_with_syllables.csv',
+                                dtype='int32', delimiter=',',
+                                header=None).to_numpy().transpose()[0]
+    print('loaded', sample_counts.shape)
 
-    print('total number of syllable types: ', np.sum(actual_counts > 0))
+    # print('total number of syllable types: ', np.sum(actual_counts > 0))
 
-    print('(sampled) total number of syllable types: ', np.sum(
-        sample_counts > 0))
+    print('(sampled) total number of syllable types: ', np.sum(sample_counts
+                                                               > 0))
 
     """
     Plotting results
@@ -65,6 +71,7 @@ for f in folders:
     num_syll_types = np.sum(sample_counts > 0)
     x = np.arange(max(sampled_lifetimes))
     y = np.bincount(sampled_lifetimes)
+    print(y.shape)
 
     # don't include no. with 0 lifespan (will be a lot since vector was made
     # much larger than needed)
@@ -87,6 +94,8 @@ for f in folders:
     else:
         plt.show()
         plt.close()
+
+    print('plot 1')
 
     # percent of syllable types being sung by some number of birds (for sample)
     my_dpi = 96
@@ -119,6 +128,7 @@ for f in folders:
         plt.show()
         plt.close()
 
+    print('plot 2')
 
     # percent of syllable types being sung by some number of birds
     # (full distribution from same time points as the sampling)

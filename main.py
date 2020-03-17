@@ -29,7 +29,7 @@ sample_freq = yrs_freq.to_numpy(dtype='int')
 """
 Cultural Transmission Model
 """
-save_video = True
+save_video = False
 save_pdfs = True
 home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
@@ -54,7 +54,8 @@ num_samples = len(sample_freq)
 all_coord = list(itertools.product(range(0, dim), range(0, dim)))
 
 # setup runs with various parameters
-for p in np.arange(0.01, 0.051, 0.01):
+for p in np.arange(1.0, 10.01, 2.0):
+# for p in [0.01]:
     file_name = model_type + '_' \
                 + str(p) + 'error_' \
                 + str(int(mortality_rate*100)) + 'mortality_' \
@@ -67,7 +68,7 @@ for p in np.arange(0.01, 0.051, 0.01):
 for run, params in runs.items():
     print(run)
     start_time = time.time()
-    path = home_dir + '/' + str(dim) + 'DimMatrix/Conformity/' + run + '/'
+    path = home_dir + '/' + str(dim) + 'DimMatrix/ForDissertation/' + run + '/'
     os.mkdir(path)
     os.chdir(path)
 
@@ -112,7 +113,7 @@ for run, params in runs.items():
     for timestep in range(iterations):
         print('\ntimestep', timestep)
 
-        if save_pdfs and (timestep % 10 == 9):
+        if save_pdfs and (timestep % 100 == 90):
             fns.plot_type_distributions(bird_matrix, timestep)
 
             if model_type == 'directional':

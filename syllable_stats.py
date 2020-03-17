@@ -60,9 +60,9 @@ combined_table = combined_table.drop(['FileName'], axis=1)
 """
 downsample by latitude and longitude
 """
-combined_table = combined_table.groupby(
-    ['Latitude', 'Longitude']).apply(
-    lambda x: x.sample(1, random_state=42)).reset_index(drop=True)
+# combined_table = combined_table.groupby(
+#     ['Latitude', 'Longitude']).apply(
+#     lambda x: x.sample(1, random_state=42)).reset_index(drop=True)
 
 """
 Frequency of syllable clusters and syllable categories: Two plots for paper
@@ -86,7 +86,7 @@ temp2['Category'] = temp2.Category.astype('category', ordered=True, categories=o
 temp2 = temp2.sort_values(['Category', 'numInCluster'], ascending=False)
 orderByCatThenByNumInCluster = temp2.ClusterNoAdjusted.values.tolist()
 
-#####PLOT 1
+#####PLOT 1: Geo chippies Fig. A
 # raw counts (not normalized)
 # sort by type (type with most to type with least); within type sort by cluster with most to least
 # stack counts in regions
@@ -113,7 +113,7 @@ plt.tight_layout()
 plt.show()
 plt.close()
 
-#####PLOT 2
+#####PLOT 2 Geo Chippies Fig. B
 # normalized by # recordings in each region
 # sort by type (type with most to type with least); within type sort by cluster
 
@@ -177,7 +177,7 @@ summary_table = summary_table.reindex_axis(['NumberOfRecordings', 'EarliestYear'
 # summary_table.to_csv('C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesProject\StatsOfFinalData_withReChipperReExported'
 #                      '/SyllableAnalysis/SyllableClusterSummaryTable.csv')
 
-######PLOT 3
+######PLOT 3: common long-lived lifespans
 # use this information to create a histogram of the lifespan of the syllable clusters (with hues for quartiles of
 # most to least prevalent syllables)
 my_dpi = 96
@@ -209,7 +209,7 @@ plt.tight_layout()
 plt.show()
 plt.close()
 
-####PLOT 4
+####PLOT 4: number of recordings vs. percent syllable types
 # now make histogram of number of syllable types vs number of birds (aka number of recordings_ with each type).
 my_dpi = 96
 sns.set(style='white')
@@ -250,7 +250,7 @@ my_dpi = 96
 sns.set(style='white')
 sns.set_context({"figure.figsize": (15, 7)})
 
-###PLOT 5
+###PLOT 5: lifespan by syllable category
 # group by lifespan and syllable category
 summary_table_yr['lifespan_group'] = np.nan
 summary_table_yr['lifespan_group'] = np.where(summary_table_yr['Lifespan'] == 1, 'short-lived', summary_table_yr[
