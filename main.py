@@ -42,6 +42,8 @@ iterations = 1000
 dim = 500
 
 mortality_rate = 0.4
+dispersal_rate = 0.1
+dispersal_dist = 3
 low_syll_type = int(0)  # should not change
 high_syll_type = int(dim ** 2 / 500)
 low_syll_rate = float(5)  # units of syllables/second
@@ -123,7 +125,7 @@ for run, params in runs.items():
         open_territories = fns.locate_dead_birds(ordered_pairs=all_coord,
                                                  num_loc=num_deaths)
         learned_types = []  # list of learned syllable types (could be a new type)
-        learned_rates = []  # list of learned syllable types (could be a new type)
+        learned_rates = []  # list of learned syllable rates
         for bird in open_territories:
             if (model_type == 'neutral') or (model_type == 'conformity'):
                 # get new sylls for birds that will now occupy empty territories
@@ -202,6 +204,27 @@ for run, params in runs.items():
         if save_video:
             new_frame = ax.imshow(bird_matrix, cmap='gray', vmin=0, vmax=6000)
             frames.append([new_frame])
+
+        # adult dispersal
+        # get lists of indices of birds to swap places
+        swap_1, swap_2 = fns.adult_dispersal(dispersal_rate,
+                                                 dispersal_dist,
+                                             max_try=((dispersal_dist + 1)
+                                                      ** 2),
+                                             matrix_dim=dim)
+        swap_2 = np.asarray(swap_2)
+        # go through pairs of indices and swap the bird information
+        for b1, b2 in zip(swap_1, swap_2):
+            if b1 == 'None':
+                pass
+            else:
+                t1 = bird_matrix[b1[0], b1[1]]
+                t2 = bird_matrix[b2[0], b2[1]]
+                r1 = rate_matrix[b1[0], b1[1]]
+                r2 = rate_matrix[b2[0], b2[1]]
+
+                t1, t2 = t2, t1
+                r1, r2 = r2, r1
 
     if save_video:
         video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,

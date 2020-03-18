@@ -6,6 +6,7 @@ matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 import seaborn as sns; sns.set()
 
+
 def initiate(min_type, max_type, min_rate, max_rate, dim1, vector_size):
     np.random.seed(49)
     # populate each element (territory) with a random bird (syllable syll)
@@ -176,6 +177,57 @@ def sample_birds(all_territories, sampling_num):
         sample_sylls.append(all_territories[sample[0], sample[1]])
 
     return sample_sylls
+
+
+def adult_dispersal(dispersal_frac, d, max_try, matrix_dim):
+    dispersal_num = int(dispersal_frac * (matrix_dim ** 2))
+
+    # track who has already moved
+    already_dispersed = np.zeros((matrix_dim, matrix_dim), dtype=np.bool)
+    loc_samples = np.random.randint(0, matrix_dim, size=(dispersal_num, 2))
+
+    loc_swaps = []
+    for sample_1 in loc_samples:
+        # check if the bird has already dispersed
+        if already_dispersed[sample_1[0], sample_1[1]]:
+            loc_swaps.append = 'None'
+        else:
+            # get indices of neighbors within some dispersal threshold
+
+            row = sample_1[0]
+            col = sample_1[1]
+
+            # to determine indices for surrounding neighbor squares
+            row_start = row - d
+            row_end = row + d + 1
+            col_start = col - d
+            col_end = col + d + 1
+
+            # deal with edge/corner cases
+            if row_start < 0:
+                row_start = 0
+            if row_end > matrix_dim:
+                row_end = matrix_dim
+            if col_start < 0:
+                col_start = 0
+            if col_end > matrix_dim:
+                col_end = matrix_dim
+
+            # get second bird's location and check if they have already
+            # dispersed, if so, find a different second bird to swap with
+            second_dispersed = True
+            count = 0
+            while second_dispersed or count < max_try:
+                count += 1
+                sample_2 = (np.random.randint(row_start, row_end + 1, 1),
+                            np.random.randint(col_start, col_end + 1, 1))
+                if already_dispersed[sample_2[0], sample_2[1]]:
+                    second_dispersed = True
+                else:
+                    second_dispersed = False
+                    loc_swaps.append = sample_2
+
+    return loc_samples, loc_swaps
 
 
 def plot_type_distributions(types_matrix, t, bin_size=10):
