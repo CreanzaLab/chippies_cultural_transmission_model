@@ -16,10 +16,10 @@ import sys
 Load in real data to get sampling frequency
 """
 
-chippies = pd.read_csv("C:/Users/abiga\Box "
-                       "Sync\Abigail_Nicole\ChippiesProject"
-                       "\FinalDataCompilation"
-                       "\AnimalBehaviour_SupplementalDataTable2_addedMid.csv")
+chippies = pd.read_csv(
+    "C:/Users/abiga/PycharmProjects"
+    "/CreanzaLab_chippies_cultural_transmission_model/citizen_science_data"
+    "/AnimalBehaviour_SupplementalDataTable2_addedMid.csv")
 
 yrs_freq = chippies.RecordingYear.value_counts().sort_index().reindex(range(
     1950, 2018, 1)).fillna(0)
@@ -33,16 +33,16 @@ save_video = False
 save_pdfs = True
 home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
-           '/RealYearlySamplingFreq/Testing4_new'
+           '/RealYearlySamplingFreq/TestingDispersal'
 runs = {}
 model_type = 'conformity'
 conformity_factor = 2
 
-iterations = 1000
-dim = 500
+iterations = 100
+dim = 50
 
 mortality_rate = 0.4
-dispersal_rate = 0.1
+dispersal_rate = 0.005
 dispersal_dist = 3
 low_syll_type = int(0)  # should not change
 high_syll_type = int(dim ** 2 / 500)
@@ -56,8 +56,8 @@ num_samples = len(sample_freq)
 all_coord = list(itertools.product(range(0, dim), range(0, dim)))
 
 # setup runs with various parameters
-for p in np.arange(1.0, 10.01, 2.0):
-# for p in [0.01]:
+# for p in np.arange(1.0, 10.01, 2.0):
+for p in [0.05]:
     file_name = model_type + '_' \
                 + str(p) + 'error_' \
                 + str(int(mortality_rate*100)) + 'mortality_' \
@@ -70,7 +70,7 @@ for p in np.arange(1.0, 10.01, 2.0):
 for run, params in runs.items():
     print(run)
     start_time = time.time()
-    path = home_dir + '/' + str(dim) + 'DimMatrix/ForDissertation/' + run + '/'
+    path = home_dir + '/' + str(dim) + 'DimMatrix/' + run + '/'
     os.mkdir(path)
     os.chdir(path)
 
@@ -207,25 +207,45 @@ for run, params in runs.items():
 
         # adult dispersal
         # get lists of indices of birds to swap places
+        print('before dispersal')
+        fig1 = plt.figure()
+        ax1 = fig1.add_subplot(111)
+        ax1.set_aspect('equal')
+        ax1.get_xaxis().set_visible(False)
+        ax1.get_yaxis().set_visible(False)
+        ax1.set_title('before')
+
+        ax1.imshow(bird_matrix, cmap='gray')
+        plt.show()
         swap_1, swap_2 = fns.adult_dispersal(dispersal_rate,
-                                                 dispersal_dist,
+                                             dispersal_dist,
                                              max_try=((dispersal_dist + 1)
                                                       ** 2),
                                              matrix_dim=dim)
+        print('after dispersal')
         swap_2 = np.asarray(swap_2)
         # go through pairs of indices and swap the bird information
         for b1, b2 in zip(swap_1, swap_2):
-            if b1 == 'None':
+            if b2 is None:
                 pass
             else:
-                t1 = bird_matrix[b1[0], b1[1]]
-                t2 = bird_matrix[b2[0], b2[1]]
-                r1 = rate_matrix[b1[0], b1[1]]
-                r2 = rate_matrix[b2[0], b2[1]]
+                print(b1)
+                print(b2)
+                bird_matrix[b1[0], b1[1]], bird_matrix[b2[0], b2[1]] = \
+                    bird_matrix[b2[0], b2[1]], bird_matrix[b1[0], b1[1]]
+                rate_matrix[b1[0], b1[1]], rate_matrix[b2[0], b2[1]] = \
+                    rate_matrix[b2[0], b2[1]], rate_matrix[b1[0], b1[1]]
 
-                t1, t2 = t2, t1
-                r1, r2 = r2, r1
+        fig2 = plt.figure()
+        ax2 = fig2.add_subplot(111)
+        ax2.set_aspect('equal')
+        ax2.get_xaxis().set_visible(False)
+        ax2.get_yaxis().set_visible(False)
+        ax2.set_title('after')
 
+        ax2.imshow(bird_matrix, cmap='gray')
+        plt.show()
+        quit()
     if save_video:
         video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,
                                           repeat_delay=1000)
