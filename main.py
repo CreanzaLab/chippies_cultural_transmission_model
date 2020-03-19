@@ -35,10 +35,10 @@ home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
            '/RealYearlySamplingFreq/TestingDispersal'
 runs = {}
-model_type = 'conformity'
+model_type = 'neutral'
 conformity_factor = 2
 
-iterations = 100
+iterations = 1000
 dim = 500
 
 mortality_rate = 0.4
@@ -59,20 +59,41 @@ all_coord = list(itertools.product(range(0, dim), range(0, dim)))
 # for p in np.arange(1.0, 10.01, 2.0):
 for p in [0.05]:
     file_name = model_type + '_' \
-                + str(p) + 'error_' \
-                + str(int(mortality_rate*100)) + 'mortality_' \
+                + str(p) + 'err_' \
                 + str(iterations) + 'iters_' \
                 + str(dim) + 'dim_' \
-                + str(high_syll_type) + 'initialSylls'
+                + str(high_syll_type) + 'initSylls_' \
+                + str(int(mortality_rate*100)) + 'mortRate_' \
+                + str(dispersal_rate) + 'dispRate'
     runs.update({file_name: [model_type, p/100]})
 
 # iterate through each of the runs, each with unique parameters
 for run, params in runs.items():
     print(run)
     start_time = time.time()
-    path = home_dir + '/' + str(dim) + 'DimMatrix/' + run + '/'
+    path = home_dir + '/' + run + '/'
     os.mkdir(path)
     os.chdir(path)
+
+    with open('parameters_used.txt', 'w') as out_file:
+        out_file.write('model type: ' + model_type + '\n')
+        if model_type == 'conformity':
+            out_file.write('conformity factor: ' + str(conformity_factor) +
+                                                       '\n')
+        out_file.write('iterations: ' + str(iterations) + '\n')
+        out_file.write('dimensions: ' + str(dim) + '\n')
+        out_file.write('mortality rate: ' + str(mortality_rate) + '\n')
+        out_file.write('dispersal rate: ' + str(dispersal_rate) + '\n')
+        out_file.write('dispersal distance: ' + str(dispersal_dist) + '\n')
+        out_file.write('low syllable type: ' + str(low_syll_type) + '\n')
+        out_file.write('high syllable type: ' + str(high_syll_type) + '\n')
+        out_file.write('initial number syllables: ' + str(high_syll_type) +
+                       '\n')
+        out_file.write('low syllable rate: ' + str(low_syll_rate) + '\n')
+        out_file.write('high syllable rate: ' + str(high_syll_rate) + '\n')
+        out_file.write('number of years sampled: ' + str(num_samples) + '\n')
+        out_file.write('error rate: ' + str(params[1]) + '\n')
+    out_file.close()
 
     # create matrix with each element being a bird
     total_territories = dim ** 2
@@ -207,15 +228,6 @@ for run, params in runs.items():
 
         # adult dispersal
         # get lists of indices of birds to swap places
-        fig1 = plt.figure()
-        ax1 = fig1.add_subplot(111)
-        ax1.set_aspect('equal')
-        ax1.get_xaxis().set_visible(False)
-        ax1.get_yaxis().set_visible(False)
-        ax1.set_title('before')
-
-        ax1.imshow(bird_matrix, cmap='gray')
-        plt.show()
         swap_1, swap_2 = fns.adult_dispersal(dispersal_rate,
                                              dispersal_dist,
                                              max_try=((dispersal_dist + 1)
@@ -232,16 +244,6 @@ for run, params in runs.items():
                 rate_matrix[b1[0], b1[1]], rate_matrix[b2[0], b2[1]] = \
                     rate_matrix[b2[0], b2[1]], rate_matrix[b1[0], b1[1]]
 
-        fig2 = plt.figure()
-        ax2 = fig2.add_subplot(111)
-        ax2.set_aspect('equal')
-        ax2.get_xaxis().set_visible(False)
-        ax2.get_yaxis().set_visible(False)
-        ax2.set_title('after')
-
-        ax2.imshow(bird_matrix, cmap='gray')
-        plt.show()
-        quit()
     if save_video:
         video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,
                                           repeat_delay=1000)
