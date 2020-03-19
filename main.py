@@ -39,10 +39,10 @@ model_type = 'conformity'
 conformity_factor = 2
 
 iterations = 100
-dim = 50
+dim = 500
 
 mortality_rate = 0.4
-dispersal_rate = 0.005
+dispersal_rate = 0.1
 dispersal_dist = 3
 low_syll_type = int(0)  # should not change
 high_syll_type = int(dim ** 2 / 500)
@@ -207,7 +207,6 @@ for run, params in runs.items():
 
         # adult dispersal
         # get lists of indices of birds to swap places
-        print('before dispersal')
         fig1 = plt.figure()
         ax1 = fig1.add_subplot(111)
         ax1.set_aspect('equal')
@@ -222,15 +221,12 @@ for run, params in runs.items():
                                              max_try=((dispersal_dist + 1)
                                                       ** 2),
                                              matrix_dim=dim)
-        print('after dispersal')
         swap_2 = np.asarray(swap_2)
         # go through pairs of indices and swap the bird information
         for b1, b2 in zip(swap_1, swap_2):
             if b2 is None:
                 pass
             else:
-                print(b1)
-                print(b2)
                 bird_matrix[b1[0], b1[1]], bird_matrix[b2[0], b2[1]] = \
                     bird_matrix[b2[0], b2[1]], bird_matrix[b1[0], b1[1]]
                 rate_matrix[b1[0], b1[1]], rate_matrix[b2[0], b2[1]] = \
@@ -273,6 +269,5 @@ for run, params in runs.items():
                delimiter=",")
     np.savetxt('sampled_birds_with_syllables.csv', sample_unique_bps,
                delimiter=",")
-
 
     print("--- %s seconds ---" % (time.time() - start_time))

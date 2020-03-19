@@ -217,8 +217,7 @@ def adult_dispersal(dispersal_frac, d, max_try, matrix_dim):
             # dispersed, if so, find a different second bird to swap with
             second_dispersed = True
             count = 0
-            print('before while')
-            while second_dispersed or count < max_try:
+            while second_dispersed and count < max_try:
                 count += 1
                 sample_2 = (np.random.randint(row_start, row_end, 1),
                             np.random.randint(col_start, col_end, 1))
@@ -228,7 +227,6 @@ def adult_dispersal(dispersal_frac, d, max_try, matrix_dim):
                     loc_swaps.append(sample_2)
                     already_dispersed[sample_2[0], sample_2[1]] = True
                     second_dispersed = False
-            print('after while')
 
     return loc_samples, loc_swaps
 
