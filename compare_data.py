@@ -23,14 +23,6 @@ r_stats = importr('stats')
 """
 Set for plotting
 """
-save = False
-file_name = 'Directional_degError'
-
-load_errors = [0.0001, 0.001, 0.01, 0.05, 0.1, 1.0]
-# load_errors = [0.05]
-
-get_models_w = 'directional'
-
 c_all = ['#54278f',
          '#5a7d7c',
          '#5fad56',
@@ -58,7 +50,22 @@ c_directional = ['#54278f',
                  '#91732e'
                  ]
 
-c = c_directional
+
+save = True
+dispRate = '0.1dispRate'
+file_name = 'Neutral_degError_' + dispRate
+
+load_errors = [0.0001, 0.001, 0.01, 0.1, 1.0]
+# load_errors = [0.001, 0.01, 0.1, 1.0]
+# load_errors = [0.01]
+# load_errors = [0.05]
+
+get_models_w = 'neutral'
+c = c_neutral
+
+save_path = "C:/Users/abiga/Box " \
+            "Sync/Abigail_Nicole/ChippiesSyllableModel" \
+            "/RealYearlySamplingFreq/DispersalDist11"
 
 """
 Load in real song data
@@ -113,17 +120,16 @@ Load in model data
 
 path_to_model = 'C:/Users/abiga\Box ' \
                 'Sync\Abigail_Nicole\ChippiesSyllableModel' \
-                '/RealYearlySamplingFreq/Testing4_new/500DimMatrix' \
-                '/ForDissertation/'
+                '/RealYearlySamplingFreq/DispersalDist11/'
 
-model_details = "40mortality_1000iters_500dim_500initialSylls"
+model_details = "1000iters_500dim_500initSylls_40mortRate_" + dispRate
 
 model_lifetimes = {}
 model_counts = {}
 
 for i in ['neutral_', 'conformity_', 'directional_']:
     for j in load_errors:
-        key_ij = i + str(j) + "error_" + model_details
+        key_ij = i + str(j) + "err_" + model_details
         try:
             os.chdir(path_to_model + key_ij)
             model_lifetimes[key_ij] = pd.read_csv('sampled_lifetimes.csv',
@@ -200,7 +206,7 @@ lifespans = lifespans.to_frame()
 lifespans.columns = ['counts']
 lifespans['PercentOfTypes'] = lifespans['counts']/len(summary_table_yr)
 
-
+plot_3_df = pd.DataFrame(columns=['model', 'overlap', 'p-value'])
 for key in model_lifetimes:
     if str(get_models_w) in key:
         sample_lifetimes = model_lifetimes[key]
@@ -225,6 +231,11 @@ for key in model_lifetimes:
                                        workspace=20000000)
         print('p-value: {}'.format(fisher_p[0][0]))
 
+        plot_3_df = plot_3_df.append({'model': key,
+                                      'overlap': str(np.sum(np.minimum(
+                                         observed, expected))),
+                                      'p-value': str(fisher_p[0][0])},
+                                     ignore_index=True)
         # for some reason it skips the first value in y, this is okay since
         # we don't want the count of 0 birds singing syllables anyways
         lifespans[key] = pd.Series(y)
@@ -244,13 +255,14 @@ plt.ylabel('Percent of Syllable Types')
 
 plt.tight_layout()
 if save:
-    plt.savefig(
-        "C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesSyllableModel"
-        "\RealYearlySamplingFreq\Testing4_new/500DimMatrix\ForDissertation_graphs"
-        "/Hist_LifespansVsPercentTypes/" + file_name +
-        '.pdf',
-        type='pdf', bbox_inches='tight',
-        transparent=True)
+    plt.savefig(save_path +
+                "/Hist_LifespansVsPercentTypes/" +
+                file_name +
+                '.pdf',
+                type='pdf', bbox_inches='tight',
+                transparent=True)
+    plot_3_df.to_csv(save_path + "/Hist_LifespansVsPercentTypes/" +
+                     file_name + '.csv', index=False)
 plt.show()
 plt.close()
 
@@ -289,7 +301,7 @@ numSyllablesWithNumRecordings = numSyllablesWithNumRecordings.reindex(new_index2
 
 print('plot 4 data')
 
-
+# plot_4_df = pd.DataFrame(columns=['model', 'overlap', 'p-value'])
 for key in model_counts:
     if str(get_models_w) in key:
         sample_counts = model_counts[key]
@@ -305,7 +317,15 @@ for key in model_counts:
         # overlap of percent of types
         observed = numSyllablesWithNumRecordings[
             'PercentOfTypes'].fillna(0).to_numpy()
-        expected = np.pad(y[1:], (0, len(observed)-len(y[1:])), 'constant')
+
+        if len(observed) > len(y[1:]):
+            expected = np.pad(y[1:], (0, len(observed)-len(y[1:])),
+                              'constant')
+        else:
+            observed = np.pad(observed, (0, len(y[1:])-len(observed)),
+                              'constant')
+            expected = y[1:]
+
         # print(stats.chisquare(observed, expected))
         print('overlap ', np.sum(np.minimum(observed, expected)))
 
@@ -314,15 +334,19 @@ for key in model_counts:
             0).to_numpy(dtype=int)
         expected_c = np.pad(bin_count_syll_types[1:], (0, len(observed)-len(
             bin_count_syll_types[1:])), 'constant')
-        fisher_p = r_stats.fisher_test(observed_c, expected_c,
-                                       workspace=20000000,
-                                       simulate_p_value=True, B=4000)
-        print('p-value: {}'.format(fisher_p[0][0]))
-
+        # fisher_p = r_stats.fisher_test(observed_c, expected_c,
+        #                                workspace=20000000,
+        #                                simulate_p_value=True, B=4000)
+        # print('p-value: {}'.format(fisher_p[0][0]))
+        #
+        # plot_4_df = plot_4_df.append({'model': key,
+        #                               'overlap': str(np.sum(np.minimum(
+        #                                  observed, expected))),
+        #                               'p-value': str(fisher_p[0][0])},
+        #                              ignore_index=True)
         # for some reason it skips the first value in y, this is okay since
         # we don't want the count of 0 birds singing syllables anyways
         numSyllablesWithNumRecordings[key] = pd.Series(y)
-
 
 # df index 'NumberOfRecordings' is x-axis
 # y is columns 'PercentOfTypes_' for real data and models
@@ -341,12 +365,12 @@ plt.ylabel('Percent of Syllable Types')
 
 plt.tight_layout()
 if save:
-    plt.savefig(
-        "C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesSyllableModel"
-        "\RealYearlySamplingFreq\Testing4_new/500DimMatrix\ForDissertation_graphs"
-        "/Hist_NumRecVsPercentTypes/" +
-        file_name + '.pdf',
-        type='pdf', bbox_inches='tight',
-        transparent=True)
+    plt.savefig(save_path +
+                "/Hist_NumRecVsPercentTypes/" +
+                file_name + '.pdf',
+                type='pdf', bbox_inches='tight',
+                transparent=True)
+    # plot_4_df.to_csv(save_path + "/Hist_NumRecVsPercentTypes/" +
+    #                  file_name + '.csv', index=False)
 plt.show()
 plt.close()
