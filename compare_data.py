@@ -10,7 +10,7 @@ import seaborn as sns; sns.set()
 from scipy import stats
 import numpy as np
 import csv
-from scipy.stats import ranksums
+from scipy.stats import ranksums, chisquare, anderson_ksamp
 from matplotlib.ticker import FuncFormatter
 import os
 import rpy2.robjects.numpy2ri
@@ -206,7 +206,8 @@ lifespans = lifespans.to_frame()
 lifespans.columns = ['counts']
 lifespans['PercentOfTypes'] = lifespans['counts']/len(summary_table_yr)
 
-plot_3_df = pd.DataFrame(columns=['model', 'overlap', 'p-value'])
+plot_3_df = pd.DataFrame(columns=['model', 'overlap', 'fisher pval',
+                                  'chisq', 'ksamp'])
 for key in model_lifetimes:
     if str(get_models_w) in key:
         sample_lifetimes = model_lifetimes[key]
@@ -227,14 +228,22 @@ for key in model_lifetimes:
         observed_c = lifespans['counts'].fillna(0).to_numpy(dtype=int)
         expected_c = np.pad(bin_count_syll_types[1:], (0, len(observed)-len(
             bin_count_syll_types[1:])), 'constant')
+
         fisher_p = r_stats.fisher_test(observed_c, expected_c,
                                        workspace=20000000)
-        print('p-value: {}'.format(fisher_p[0][0]))
+        chisq = chisquare(observed_c, expected_c)
+        ksamp = anderson_ksamp([observed_c, expected_c])
+
+        print('fisher pval: {}'.format(fisher_p[0][0]))
+        print('chisq', chisq)
+        print('ksamp', ksamp)
 
         plot_3_df = plot_3_df.append({'model': key,
                                       'overlap': str(np.sum(np.minimum(
                                          observed, expected))),
-                                      'p-value': str(fisher_p[0][0])},
+                                      'fisher pval': str(fisher_p[0][0]),
+                                      'chisq': str(chisq),
+                                      'ksamp': str(ksamp)},
                                      ignore_index=True)
         # for some reason it skips the first value in y, this is okay since
         # we don't want the count of 0 birds singing syllables anyways
@@ -301,7 +310,8 @@ numSyllablesWithNumRecordings = numSyllablesWithNumRecordings.reindex(new_index2
 
 print('plot 4 data')
 
-# plot_4_df = pd.DataFrame(columns=['model', 'overlap', 'p-value'])
+plot_4_df = pd.DataFrame(columns=['model', 'overlap', 'fisher pval',
+                                  'chisq', 'ksamp'])
 for key in model_counts:
     if str(get_models_w) in key:
         sample_counts = model_counts[key]
@@ -334,16 +344,26 @@ for key in model_counts:
             0).to_numpy(dtype=int)
         expected_c = np.pad(bin_count_syll_types[1:], (0, len(observed)-len(
             bin_count_syll_types[1:])), 'constant')
-        # fisher_p = r_stats.fisher_test(observed_c, expected_c,
-        #                                workspace=20000000,
-        #                                simulate_p_value=True, B=4000)
-        # print('p-value: {}'.format(fisher_p[0][0]))
-        #
-        # plot_4_df = plot_4_df.append({'model': key,
-        #                               'overlap': str(np.sum(np.minimum(
-        #                                  observed, expected))),
-        #                               'p-value': str(fisher_p[0][0])},
-        #                              ignore_index=True)
+
+        fisher_p = r_stats.fisher_test(observed_c, expected_c,
+                                       workspace=20000000,
+                                       simulate_p_value=True, B=4000)
+        chisq = chisquare(observed_c, expected_c)
+        ksamp = anderson_ksamp([observed_c, expected_c])
+
+        print('fisher pval: {}'.format(fisher_p[0][0]))
+        print('chisq', chisq)
+        print('ksamp', ksamp)
+
+
+        plot_4_df = plot_4_df.append({'model': key,
+                                      'overlap': str(np.sum(np.minimum(
+                                         observed, expected))),
+                                      'fisher pval': str(fisher_p[0][0]),
+                                      'chisq': str(chisq),
+                                      'ksamp': str(ksamp)},
+                                     ignore_index=True)
+
         # for some reason it skips the first value in y, this is okay since
         # we don't want the count of 0 birds singing syllables anyways
         numSyllablesWithNumRecordings[key] = pd.Series(y)
@@ -370,7 +390,7 @@ if save:
                 file_name + '.pdf',
                 type='pdf', bbox_inches='tight',
                 transparent=True)
-    # plot_4_df.to_csv(save_path + "/Hist_NumRecVsPercentTypes/" +
-    #                  file_name + '.csv', index=False)
+    plot_4_df.to_csv(save_path + "/Hist_NumRecVsPercentTypes/" +
+                     file_name + '.csv', index=False)
 plt.show()
 plt.close()
