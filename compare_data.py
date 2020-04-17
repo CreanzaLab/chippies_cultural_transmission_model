@@ -53,15 +53,15 @@ c_directional = ['#54278f',
 
 save = True
 dispRate = '0.1dispRate'
-file_name = 'Neutral_degError_' + dispRate
+file_name = 'directional_degError_' + dispRate
 
 load_errors = [0.0001, 0.001, 0.01, 0.1, 1.0]
 # load_errors = [0.001, 0.01, 0.1, 1.0]
 # load_errors = [0.01]
 # load_errors = [0.05]
 
-get_models_w = 'neutral'
-c = c_neutral
+get_models_w = 'directional'
+c = c_directional
 
 save_path = "C:/Users/abiga/Box " \
             "Sync/Abigail_Nicole/ChippiesSyllableModel" \
@@ -207,7 +207,7 @@ lifespans.columns = ['counts']
 lifespans['PercentOfTypes'] = lifespans['counts']/len(summary_table_yr)
 
 plot_3_df = pd.DataFrame(columns=['model', 'overlap', 'fisher pval',
-                                  'chisq', 'ksamp'])
+                                  'fisher exact', 'chisq', 'ksamp'])
 for key in model_lifetimes:
     if str(get_models_w) in key:
         sample_lifetimes = model_lifetimes[key]
@@ -229,8 +229,25 @@ for key in model_lifetimes:
         expected_c = np.pad(bin_count_syll_types[1:], (0, len(observed)-len(
             bin_count_syll_types[1:])), 'constant')
 
-        fisher_p = r_stats.fisher_test(observed_c, expected_c,
-                                       workspace=20000000)
+        # np.savetxt(save_path + "/Hist_LifespansVsPercentTypes/" +
+        #              file_name + '_observed_c.csv', observed_c, delimiter=',')
+        # np.savetxt(save_path + "/Hist_LifespansVsPercentTypes/" +
+        #              file_name + '_expected_c.csv', expected_c, delimiter=',')
+
+        print(np.shape(np.column_stack((observed_c, expected_c))))
+        try:
+            fisher_e = 'exact'
+            fisher_p = r_stats.fisher_test(np.column_stack((observed_c,
+                                                            expected_c)),
+                                           workspace=20000000)
+        except rpy2.rinterface.RRuntimeError:
+            fisher_e = 'simulated'
+            fisher_p = r_stats.fisher_test(np.column_stack((observed_c,
+                                                            expected_c)),
+                                           workspace=20000000,
+                                           simulate_p_value=True,
+                                           B=1000000)
+
         chisq = chisquare(observed_c, expected_c)
         ksamp = anderson_ksamp([observed_c, expected_c])
 
@@ -242,6 +259,7 @@ for key in model_lifetimes:
                                       'overlap': str(np.sum(np.minimum(
                                          observed, expected))),
                                       'fisher pval': str(fisher_p[0][0]),
+                                      'fisher exact': str(fisher_e),
                                       'chisq': str(chisq),
                                       'ksamp': str(ksamp)},
                                      ignore_index=True)
@@ -311,7 +329,7 @@ numSyllablesWithNumRecordings = numSyllablesWithNumRecordings.reindex(new_index2
 print('plot 4 data')
 
 plot_4_df = pd.DataFrame(columns=['model', 'overlap', 'fisher pval',
-                                  'chisq', 'ksamp'])
+                                  'fisher exact', 'chisq', 'ksamp'])
 for key in model_counts:
     if str(get_models_w) in key:
         sample_counts = model_counts[key]
@@ -342,12 +360,31 @@ for key in model_counts:
         # fishers test on counts
         observed_c = numSyllablesWithNumRecordings['counts'].fillna(
             0).to_numpy(dtype=int)
-        expected_c = np.pad(bin_count_syll_types[1:], (0, len(observed)-len(
-            bin_count_syll_types[1:])), 'constant')
 
-        fisher_p = r_stats.fisher_test(observed_c, expected_c,
-                                       workspace=20000000,
-                                       simulate_p_value=True, B=4000)
+        if len(observed_c) > len(bin_count_syll_types[1:]):
+            expected_c = np.pad(bin_count_syll_types[1:],
+                                (0, len(observed_c)-len(
+                                    bin_count_syll_types[1:])), 'constant')
+        else:
+            observed_c = np.pad(observed_c,
+                                (0, len(bin_count_syll_types[1:])-len(
+                                    observed_c)), 'constant')
+            expected_c = bin_count_syll_types[1:]
+
+        print(np.shape(np.column_stack((observed_c, expected_c))))
+        try:
+            fisher_e = 'exact'
+            fisher_p = r_stats.fisher_test(np.column_stack((observed_c,
+                                                            expected_c)),
+                                           workspace=20000000)
+        except rpy2.rinterface.RRuntimeError:
+            fisher_e = 'simulated'
+            fisher_p = r_stats.fisher_test(np.column_stack((observed_c,
+                                                            expected_c)),
+                                           workspace=20000000,
+                                           simulate_p_value=True,
+                                           B=1000000)
+
         chisq = chisquare(observed_c, expected_c)
         ksamp = anderson_ksamp([observed_c, expected_c])
 
@@ -360,6 +397,7 @@ for key in model_counts:
                                       'overlap': str(np.sum(np.minimum(
                                          observed, expected))),
                                       'fisher pval': str(fisher_p[0][0]),
+                                      'fisher exact': str(fisher_e),
                                       'chisq': str(chisq),
                                       'ksamp': str(ksamp)},
                                      ignore_index=True)
