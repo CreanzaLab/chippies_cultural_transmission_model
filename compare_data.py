@@ -1,4 +1,5 @@
 from __future__ import print_function
+from collapse_data import collapse_array
 import sys
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -59,6 +60,12 @@ load_errors = [0.0001, 0.001, 0.01, 0.1, 1.0]
 # load_errors = [0.001, 0.01, 0.1, 1.0]
 # load_errors = [0.01]
 # load_errors = [0.05]
+
+collapse = True
+if collapse:
+    collapse_folder = 'Collapsed/'
+else:
+    collapse_folder = ''
 
 get_models_w = 'directional'
 c = c_directional
@@ -204,6 +211,12 @@ print('plot 3 data')
 lifespans = lifespan_quantile[:].sum(axis='columns')
 lifespans = lifespans.to_frame()
 lifespans.columns = ['counts']
+
+if collapse:
+    lifespans['counts'] = collapse_array(lifespans['counts'].to_numpy(),
+                                         data='lifespans').tolist()
+    lifespans = lifespans[lifespans.counts != -1]
+
 lifespans['PercentOfTypes'] = lifespans['counts']/len(summary_table_yr)
 
 plot_3_df = pd.DataFrame(columns=['model', 'overlap', 'fisher pval',
@@ -215,26 +228,32 @@ for key in model_lifetimes:
         #add model data
         num_syll_types = np.sum(sample_lifetimes > 0)
         bin_count_syll_types = np.bincount(sample_lifetimes)
+
+        if collapse:
+            bin_count_syll_types = collapse_array(bin_count_syll_types[1:],
+                                                  data='lifespans')
+            bin_count_syll_types = bin_count_syll_types[bin_count_syll_types
+                                                        != -1]
+        else:
+            bin_count_syll_types = bin_count_syll_types[1:]
+
         y = bin_count_syll_types / num_syll_types
 
         print(key)
 
         # overlap of percent of types
         observed = lifespans['PercentOfTypes'].to_numpy()
-        expected = np.pad(y[1:], (0, len(observed)-len(y[1:])), 'constant')
+        expected = np.pad(y, (0, len(observed)-len(y)), 'constant')
         print('overlap ', np.sum(np.minimum(observed, expected)))
 
         # fishers test on counts
         observed_c = lifespans['counts'].fillna(0).to_numpy(dtype=int)
-        expected_c = np.pad(bin_count_syll_types[1:], (0, len(observed)-len(
-            bin_count_syll_types[1:])), 'constant')
+        expected_c = np.pad(bin_count_syll_types, (0, len(observed_c)-len(
+            bin_count_syll_types)), 'constant')
 
-        # np.savetxt(save_path + "/Hist_LifespansVsPercentTypes/" +
-        #              file_name + '_observed_c.csv', observed_c, delimiter=',')
-        # np.savetxt(save_path + "/Hist_LifespansVsPercentTypes/" +
-        #              file_name + '_expected_c.csv', expected_c, delimiter=',')
+        print('size of contingency table', np.shape(np.column_stack((
+            observed_c, expected_c))))
 
-        print(np.shape(np.column_stack((observed_c, expected_c))))
         try:
             fisher_e = 'exact'
             fisher_p = r_stats.fisher_test(np.column_stack((observed_c,
@@ -263,9 +282,8 @@ for key in model_lifetimes:
                                       'chisq': str(chisq),
                                       'ksamp': str(ksamp)},
                                      ignore_index=True)
-        # for some reason it skips the first value in y, this is okay since
-        # we don't want the count of 0 birds singing syllables anyways
-        lifespans[key] = pd.Series(y)
+
+        lifespans[key] = pd.Series(y, index=lifespans.index[:len(y)])
 
 # plot and save figure
 ax = lifespans.plot(kind='bar',
@@ -283,13 +301,13 @@ plt.ylabel('Percent of Syllable Types')
 plt.tight_layout()
 if save:
     plt.savefig(save_path +
-                "/Hist_LifespansVsPercentTypes/" +
+                "/Hist_LifespansVsPercentTypes/" + collapse_folder +
                 file_name +
                 '.pdf',
                 type='pdf', bbox_inches='tight',
                 transparent=True)
     plot_3_df.to_csv(save_path + "/Hist_LifespansVsPercentTypes/" +
-                     file_name + '.csv', index=False)
+                     collapse_folder + file_name + '.csv', index=False)
 plt.show()
 plt.close()
 
@@ -309,22 +327,22 @@ plt.figure(4)
 # recorded X number of times (NumberOfRecordings)
 numSyllablesWithNumRecordings = summary_table.groupby('NumberOfRecordings').size().reset_index(
     name='counts').reset_index(drop=True)
+numSyllablesWithNumRecordings.set_index('NumberOfRecordings', inplace=True)
+# add missing indexes filling in counts w/ NaN and replace with 0's
+new_index2 = list(range(min(numSyllablesWithNumRecordings.index), max(numSyllablesWithNumRecordings.index)+1))
+numSyllablesWithNumRecordings = numSyllablesWithNumRecordings.reindex(
+    new_index2).fillna(0)
+
+if collapse:
+    numSyllablesWithNumRecordings['counts'] = \
+        collapse_array(numSyllablesWithNumRecordings['counts'].to_numpy(),
+                       data='recordings').tolist()
+    numSyllablesWithNumRecordings = numSyllablesWithNumRecordings[
+        numSyllablesWithNumRecordings.counts != -1]
+
 # divide counts (number of syllable types) by total number of syllable types
 numSyllablesWithNumRecordings['PercentOfTypes'] = numSyllablesWithNumRecordings['counts']/len(
     summary_table)
-
-# just for exploring the data (not plotting)
-above_thresh = numSyllablesWithNumRecordings[numSyllablesWithNumRecordings['NumberOfRecordings'] >= 20]
-percent_numRec = (above_thresh['NumberOfRecordings'].astype(float)*above_thresh['counts']).sum()/(
-    numSyllablesWithNumRecordings['NumberOfRecordings']*numSyllablesWithNumRecordings['counts']).sum()
-percent_syllTypes = above_thresh['PercentOfTypes'].sum()
-# print('percent num rec', percent_numRec)
-# print('percent syll types', percent_syllTypes)
-
-numSyllablesWithNumRecordings.set_index('NumberOfRecordings', inplace=True)
-# add missing indexes filling in counts and PercentOfTypes w/ NaN
-new_index2 = list(range(min(numSyllablesWithNumRecordings.index), max(numSyllablesWithNumRecordings.index)+1))
-numSyllablesWithNumRecordings = numSyllablesWithNumRecordings.reindex(new_index2)
 
 print('plot 4 data')
 
@@ -338,6 +356,18 @@ for key in model_counts:
         num_syll_types = np.sum(sample_counts > 0)
         bin_count_syll_types = np.bincount(sample_counts)
         # x = np.arange(len(bin_count_syll_types))[1:]
+
+        if collapse:
+            # pad to be size of real data (max has 38 recordings of same type)
+            bin_count_syll_types = np.pad(bin_count_syll_types, (0, 39),
+                                          'constant')
+            bin_count_syll_types = collapse_array(bin_count_syll_types[1:],
+                                                  data='recordings')
+            bin_count_syll_types = bin_count_syll_types[bin_count_syll_types
+                                                        != -1]
+        else:
+            bin_count_syll_types = bin_count_syll_types[1:]
+
         y = bin_count_syll_types / num_syll_types
 
         print(key)
@@ -346,30 +376,29 @@ for key in model_counts:
         observed = numSyllablesWithNumRecordings[
             'PercentOfTypes'].fillna(0).to_numpy()
 
-        if len(observed) > len(y[1:]):
-            expected = np.pad(y[1:], (0, len(observed)-len(y[1:])),
+        if len(observed) > len(y):
+            expected = np.pad(y, (0, len(observed)-len(y)),
                               'constant')
         else:
-            observed = np.pad(observed, (0, len(y[1:])-len(observed)),
+            observed = np.pad(observed, (0, len(y)-len(observed)),
                               'constant')
-            expected = y[1:]
+            expected = y
 
-        # print(stats.chisquare(observed, expected))
         print('overlap ', np.sum(np.minimum(observed, expected)))
 
         # fishers test on counts
         observed_c = numSyllablesWithNumRecordings['counts'].fillna(
             0).to_numpy(dtype=int)
 
-        if len(observed_c) > len(bin_count_syll_types[1:]):
-            expected_c = np.pad(bin_count_syll_types[1:],
+        if len(observed_c) > len(bin_count_syll_types):
+            expected_c = np.pad(bin_count_syll_types,
                                 (0, len(observed_c)-len(
-                                    bin_count_syll_types[1:])), 'constant')
+                                    bin_count_syll_types)), 'constant')
         else:
             observed_c = np.pad(observed_c,
-                                (0, len(bin_count_syll_types[1:])-len(
+                                (0, len(bin_count_syll_types)-len(
                                     observed_c)), 'constant')
-            expected_c = bin_count_syll_types[1:]
+            expected_c = bin_count_syll_types
 
         print(np.shape(np.column_stack((observed_c, expected_c))))
         try:
@@ -402,9 +431,15 @@ for key in model_counts:
                                       'ksamp': str(ksamp)},
                                      ignore_index=True)
 
-        # for some reason it skips the first value in y, this is okay since
-        # we don't want the count of 0 birds singing syllables anyways
-        numSyllablesWithNumRecordings[key] = pd.Series(y)
+        # numSyllablesWithNumRecordings[key] = pd.Series(y)
+        if collapse:
+            numSyllablesWithNumRecordings[key] = \
+                pd.Series(y, index=numSyllablesWithNumRecordings.index)
+        else:
+            numSyllablesWithNumRecordings = pd.concat((
+                numSyllablesWithNumRecordings,
+                pd.Series(y, index=np.arange(1, len(y)+1)).rename(key)), axis=1)
+
 
 # df index 'NumberOfRecordings' is x-axis
 # y is columns 'PercentOfTypes_' for real data and models
@@ -424,11 +459,11 @@ plt.ylabel('Percent of Syllable Types')
 plt.tight_layout()
 if save:
     plt.savefig(save_path +
-                "/Hist_NumRecVsPercentTypes/" +
+                "/Hist_NumRecVsPercentTypes/" + collapse_folder +
                 file_name + '.pdf',
                 type='pdf', bbox_inches='tight',
                 transparent=True)
     plot_4_df.to_csv(save_path + "/Hist_NumRecVsPercentTypes/" +
-                     file_name + '.csv', index=False)
+                     collapse_folder + file_name + '.csv', index=False)
 plt.show()
 plt.close()

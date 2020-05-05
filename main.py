@@ -101,6 +101,8 @@ for run, params in runs.items():
     # create empty vector w/ more space than expected for num of sylls created
     vector_size = int(total_territories * iterations * params[1] * \
                   mortality_rate * 10)
+    if vector_size == 0:
+        vector_size = 1000
 
     # initialize the first set of birds
     bird_matrix, rate_matrix, current_bps, actual_lifetimes, unique_bps, \
