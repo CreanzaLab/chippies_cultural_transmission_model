@@ -33,9 +33,9 @@ save_video = False
 save_pdfs = True
 home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
-           '/RealYearlySamplingFreq/TestingDispersal'
+           '/RealYearlySamplingFreq/DispersalDist11'
 runs = {}
-model_type = 'neutral'
+model_type = 'directional'
 conformity_factor = 2
 
 iterations = 1000
@@ -43,7 +43,7 @@ dim = 500
 
 mortality_rate = 0.4
 dispersal_rate = 0.1
-dispersal_dist = 3
+dispersal_dist = 11
 low_syll_type = int(0)  # should not change
 high_syll_type = int(dim ** 2 / 500)
 low_syll_rate = float(5)  # units of syllables/second
@@ -57,7 +57,8 @@ all_coord = list(itertools.product(range(0, dim), range(0, dim)))
 
 # setup runs with various parameters
 # for p in np.arange(1.0, 10.01, 2.0):
-for p in [0.05]:
+for p in [0.0001, 0.001, 0.01, 0.1, 1.0]:
+# for p in [0.05]:
     file_name = model_type + '_' \
                 + str(p) + 'err_' \
                 + str(iterations) + 'iters_' \
@@ -230,21 +231,24 @@ for run, params in runs.items():
 
         # adult dispersal
         # get lists of indices of birds to swap places
-        swap_1, swap_2 = fns.adult_dispersal(dispersal_rate,
-                                             dispersal_dist,
-                                             max_try=((dispersal_dist + 1)
-                                                      ** 2),
-                                             matrix_dim=dim)
-        swap_2 = np.asarray(swap_2)
-        # go through pairs of indices and swap the bird information
-        for b1, b2 in zip(swap_1, swap_2):
-            if b2 is None:
-                pass
-            else:
-                bird_matrix[b1[0], b1[1]], bird_matrix[b2[0], b2[1]] = \
-                    bird_matrix[b2[0], b2[1]], bird_matrix[b1[0], b1[1]]
-                rate_matrix[b1[0], b1[1]], rate_matrix[b2[0], b2[1]] = \
-                    rate_matrix[b2[0], b2[1]], rate_matrix[b1[0], b1[1]]
+        if dispersal_rate == 0:
+            pass
+        else:
+            swap_1, swap_2 = fns.adult_dispersal(dispersal_rate,
+                                                 dispersal_dist,
+                                                 max_try=((dispersal_dist + 1)
+                                                          ** 2),
+                                                 matrix_dim=dim)
+            swap_2 = np.asarray(swap_2)
+            # go through pairs of indices and swap the bird information
+            for b1, b2 in zip(swap_1, swap_2):
+                if b2 is None:
+                    pass
+                else:
+                    bird_matrix[b1[0], b1[1]], bird_matrix[b2[0], b2[1]] = \
+                        bird_matrix[b2[0], b2[1]], bird_matrix[b1[0], b1[1]]
+                    rate_matrix[b1[0], b1[1]], rate_matrix[b2[0], b2[1]] = \
+                        rate_matrix[b2[0], b2[1]], rate_matrix[b1[0], b1[1]]
 
     if save_video:
         video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,

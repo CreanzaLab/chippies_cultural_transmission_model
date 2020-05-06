@@ -52,13 +52,13 @@ c_directional = ['#54278f',
                  ]
 
 
-save = True
-dispRate = '0.1dispRate'
+save = False
+dispRate = '0.3dispRate'
 file_name = 'directional_degError_' + dispRate
 
-load_errors = [0.0001, 0.001, 0.01, 0.1, 1.0]
-# load_errors = [0.001, 0.01, 0.1, 1.0]
-# load_errors = [0.01]
+# load_errors = [0.0001, 0.001, 0.01, 0.1, 1.0]
+load_errors = [0.05, 0.1, 0.15]
+# load_errors = ['1e-08']
 # load_errors = [0.05]
 
 collapse = True
@@ -113,7 +113,6 @@ combined_table = combined_table.drop_duplicates(['CatalogNo',
                                                  'ClusterNoAdjusted'],
                                                 keep='first')
 combined_table = combined_table.drop(['FileName'], axis=1)
-
 
 ## downsample by latitude and longitude
 # combined_table = combined_table.groupby(
