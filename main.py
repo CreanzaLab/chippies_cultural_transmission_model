@@ -16,10 +16,10 @@ import sys
 Load in real data to get sampling frequency
 """
 
-chippies = pd.read_csv("C:/Users/abiga\Box "
-                       "Sync\Abigail_Nicole\ChippiesProject"
-                       "\FinalDataCompilation"
-                       "\AnimalBehaviour_SupplementalDataTable2_addedMid.csv")
+chippies = pd.read_csv(
+    "C:/Users/abiga/PycharmProjects"
+    "/CreanzaLab_chippies_cultural_transmission_model/citizen_science_data"
+    "/AnimalBehaviour_SupplementalDataTable2_addedMid.csv")
 
 yrs_freq = chippies.RecordingYear.value_counts().sort_index().reindex(range(
     1950, 2018, 1)).fillna(0)
@@ -33,15 +33,17 @@ save_video = False
 save_pdfs = True
 home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
-           '/RealYearlySamplingFreq/Testing4_new'
+           '/RealYearlySamplingFreq/DispersalDist11'
 runs = {}
-model_type = 'conformity'
+model_type = 'directional'
 conformity_factor = 2
 
 iterations = 1000
 dim = 500
 
 mortality_rate = 0.4
+dispersal_rate = 0.1
+dispersal_dist = 11
 low_syll_type = int(0)  # should not change
 high_syll_type = int(dim ** 2 / 500)
 low_syll_rate = float(5)  # units of syllables/second
@@ -54,23 +56,45 @@ num_samples = len(sample_freq)
 all_coord = list(itertools.product(range(0, dim), range(0, dim)))
 
 # setup runs with various parameters
-for p in np.arange(1.0, 10.01, 2.0):
-# for p in [0.01]:
+# for p in np.arange(1.0, 10.01, 2.0):
+for p in [0.0001, 0.001, 0.01, 0.1, 1.0]:
+# for p in [0.05]:
     file_name = model_type + '_' \
-                + str(p) + 'error_' \
-                + str(int(mortality_rate*100)) + 'mortality_' \
+                + str(p) + 'err_' \
                 + str(iterations) + 'iters_' \
                 + str(dim) + 'dim_' \
-                + str(high_syll_type) + 'initialSylls'
+                + str(high_syll_type) + 'initSylls_' \
+                + str(int(mortality_rate*100)) + 'mortRate_' \
+                + str(dispersal_rate) + 'dispRate'
     runs.update({file_name: [model_type, p/100]})
 
 # iterate through each of the runs, each with unique parameters
 for run, params in runs.items():
     print(run)
     start_time = time.time()
-    path = home_dir + '/' + str(dim) + 'DimMatrix/ForDissertation/' + run + '/'
+    path = home_dir + '/' + run + '/'
     os.mkdir(path)
     os.chdir(path)
+
+    with open('parameters_used.txt', 'w') as out_file:
+        out_file.write('model type: ' + model_type + '\n')
+        if model_type == 'conformity':
+            out_file.write('conformity factor: ' + str(conformity_factor) +
+                                                       '\n')
+        out_file.write('iterations: ' + str(iterations) + '\n')
+        out_file.write('dimensions: ' + str(dim) + '\n')
+        out_file.write('mortality rate: ' + str(mortality_rate) + '\n')
+        out_file.write('dispersal rate: ' + str(dispersal_rate) + '\n')
+        out_file.write('dispersal distance: ' + str(dispersal_dist) + '\n')
+        out_file.write('low syllable type: ' + str(low_syll_type) + '\n')
+        out_file.write('high syllable type: ' + str(high_syll_type) + '\n')
+        out_file.write('initial number syllables: ' + str(high_syll_type) +
+                       '\n')
+        out_file.write('low syllable rate: ' + str(low_syll_rate) + '\n')
+        out_file.write('high syllable rate: ' + str(high_syll_rate) + '\n')
+        out_file.write('number of years sampled: ' + str(num_samples) + '\n')
+        out_file.write('error rate: ' + str(params[1]) + '\n')
+    out_file.close()
 
     # create matrix with each element being a bird
     total_territories = dim ** 2
@@ -78,6 +102,8 @@ for run, params in runs.items():
     # create empty vector w/ more space than expected for num of sylls created
     vector_size = int(total_territories * iterations * params[1] * \
                   mortality_rate * 10)
+    if vector_size == 0:
+        vector_size = 1000
 
     # initialize the first set of birds
     bird_matrix, rate_matrix, current_bps, actual_lifetimes, unique_bps, \
@@ -123,7 +149,7 @@ for run, params in runs.items():
         open_territories = fns.locate_dead_birds(ordered_pairs=all_coord,
                                                  num_loc=num_deaths)
         learned_types = []  # list of learned syllable types (could be a new type)
-        learned_rates = []  # list of learned syllable types (could be a new type)
+        learned_rates = []  # list of learned syllable rates
         for bird in open_territories:
             if (model_type == 'neutral') or (model_type == 'conformity'):
                 # get new sylls for birds that will now occupy empty territories
@@ -203,6 +229,27 @@ for run, params in runs.items():
             new_frame = ax.imshow(bird_matrix, cmap='gray', vmin=0, vmax=6000)
             frames.append([new_frame])
 
+        # adult dispersal
+        # get lists of indices of birds to swap places
+        if dispersal_rate == 0:
+            pass
+        else:
+            swap_1, swap_2 = fns.adult_dispersal(dispersal_rate,
+                                                 dispersal_dist,
+                                                 max_try=((dispersal_dist + 1)
+                                                          ** 2),
+                                                 matrix_dim=dim)
+            swap_2 = np.asarray(swap_2)
+            # go through pairs of indices and swap the bird information
+            for b1, b2 in zip(swap_1, swap_2):
+                if b2 is None:
+                    pass
+                else:
+                    bird_matrix[b1[0], b1[1]], bird_matrix[b2[0], b2[1]] = \
+                        bird_matrix[b2[0], b2[1]], bird_matrix[b1[0], b1[1]]
+                    rate_matrix[b1[0], b1[1]], rate_matrix[b2[0], b2[1]] = \
+                        rate_matrix[b2[0], b2[1]], rate_matrix[b1[0], b1[1]]
+
     if save_video:
         video = animation.ArtistAnimation(fig, frames, interval=100, blit=False,
                                           repeat_delay=1000)
@@ -230,6 +277,5 @@ for run, params in runs.items():
                delimiter=",")
     np.savetxt('sampled_birds_with_syllables.csv', sample_unique_bps,
                delimiter=",")
-
 
     print("--- %s seconds ---" % (time.time() - start_time))
