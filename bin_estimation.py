@@ -1,5 +1,5 @@
 import numpy as np
-
+import random
 
 def bin_weight(bins, unbinned_data, bin_count_importance=1,
                bin_size_importance=1, ignore_ones=True):
@@ -49,60 +49,66 @@ def bin_weight(bins, unbinned_data, bin_count_importance=1,
 
 # fixed variables
 numBinsNonSingleton = 6
-iterations = 10000
+iterations = 1000000
+random.seed(45)
 
 # data to be used
-counts = [43,  0,  5,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-          0,  0,  0,  1,  1,  0,  0,  0,  1,  0,
-          0,  1,  0,  0,  2,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,
-          0,  2,  2,  1,  2,  0,  0,  3,  1,  0,  4,
-          3,  2,  4,  4,  2,  2,  3,  1,  1,  3,  4,  1,  1]
+counts_lifespans = [43,  0,  5,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0,
+                    0,  0,  0,  0,  0,  0,  1,  1,  0,  0,  0,  1,  0,  0,
+                    1,  0,  0,  2,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,
+                    1,  1,  0,  2,  2,  1,  2,  0,  0,  3,  1,  0,  4,  3,
+                    2,  4,  4,  2,  2,  3,  1,  1,  3,  4,  1,  1]
 
-# transform counts into the data itself
-test_data = np.repeat(np.arange(1, 1 + len(counts)), counts)
+counts_numSyllables = [40,  7,  8,  4,  7, 10,  1,  2,  2,  0,  2,  6,  4,
+                       0,  1,  2,  2,  1,  2,  1,  1,  0,  1,  0,  1,  0,  3,
+                       0,  1,  0,  0,  0,  0,  0,  2,  0,  0,  1]
 
-# create initial bins (set by fixed variables)
-bins = np.ceil(np.histogram_bin_edges(test_data[test_data != 1],
-                                      numBinsNonSingleton))[1:-1]
+for counts in [counts_lifespans, counts_numSyllables]:
+    # transform counts into the data itself
+    test_data = np.repeat(np.arange(1, 1 + len(counts)), counts)
 
-# run iterations
-for i in range(iterations):
-    # in each iteration, a weight is calculated, along with each bin's contribution to that weight.
-    # These weights are used to 'jitter' the bin edges accordingly, and a new weight is calculated
-    # If the new weight is lower, the jittered bins are accepted.
+    # create initial bins (set by fixed variables)
+    bins = np.ceil(np.histogram_bin_edges(test_data[test_data != 1],
+                                          numBinsNonSingleton))[1:-1]
 
-    old_weight = bin_weight(bins, test_data)
+    # run iterations
+    for i in range(iterations):
+        # in each iteration, a weight is calculated, along with each bin's contribution to that weight.
+        # These weights are used to 'jitter' the bin edges accordingly, and a new weight is calculated
+        # If the new weight is lower, the jittered bins are accepted.
 
-    max_decrease = (np.append(min(test_data[test_data != 1]), bins[:-1]) -
-                    bins) + 1
-    max_increase = (np.append(bins[1:], len(counts) + 1) - bins)
+        old_weight = bin_weight(bins, test_data)
 
-    # the max and min changes to bin edges can cause bin edges to cross, so this should be avoided
-    change_to_bins = np.zeros_like(bins)
-    while (change_to_bins == np.zeros_like(bins)).all() or\
-            (bins + change_to_bins != np.sort(bins + change_to_bins)).any():
-        change_to_bins = np.array([np.random.randint(dec, np.ceil(inc))
-                                   for dec, inc
-                                   in zip(max_decrease, max_increase)])
+        max_decrease = (np.append(min(test_data[test_data != 1]), bins[:-1]) -
+                        bins) + 1
+        max_increase = (np.append(bins[1:], len(counts) + 1) - bins)
 
-    new_weight = bin_weight(bins + change_to_bins, test_data)
+        # the max and min changes to bin edges can cause bin edges to cross, so this should be avoided
+        change_to_bins = np.zeros_like(bins)
+        while (change_to_bins == np.zeros_like(bins)).all() or\
+                (bins + change_to_bins != np.sort(bins + change_to_bins)).any():
+            change_to_bins = np.array([np.random.randint(dec, np.ceil(inc))
+                                       for dec, inc
+                                       in zip(max_decrease, max_increase)])
 
-    if new_weight < old_weight:
-        bins = bins + change_to_bins
+        new_weight = bin_weight(bins + change_to_bins, test_data)
 
-###
+        if new_weight < old_weight:
+            bins = bins + change_to_bins
 
-print("final weight: ", bin_weight(bins, test_data))
+    ###
 
-bins = np.append([1, min(test_data) + 1], np.append(bins, max(test_data) + 1))
+    print("final weight: ", bin_weight(bins, test_data))
 
-print("bins: ", bins)
+    bins = np.append([1, min(test_data) + 1], np.append(bins, max(test_data) + 1))
 
-print("bin sizes: ", bins[1:] - bins[:-1])
+    print("bins: ", bins)
 
-print("counts: ", np.unique(np.digitize(test_data, bins),
-                            return_counts=True)[1])
+    print("bin sizes: ", bins[1:] - bins[:-1])
 
-print("hist: ", np.histogram(test_data, bins))
+    print("counts: ", np.unique(np.digitize(test_data, bins),
+                                return_counts=True)[1])
+
+    print("hist: ", np.histogram(test_data, bins))
 
 
