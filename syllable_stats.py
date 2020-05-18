@@ -14,6 +14,13 @@ from scipy.stats import ranksums
 from matplotlib.ticker import FuncFormatter
 
 
+"""
+Save info
+"""
+save = True
+save_path = "C:/Users/abiga\Box " \
+            "Sync/Abigail_Nicole/ChippiesSongEvolution/Figures"
+
 
 """
 Load in song data
@@ -29,7 +36,7 @@ log_song_data_unique = log_song_data.loc[log_song_data[
 
 # get rid of unnecessary metadata and the song stat variables
 col_to_skip = ['FromDatabase', 'ComparedStatus', 'RecordingDay',
-               'RecordingMonth'] + \
+               'RecordingMonth', 'Region'] + \
               list(log_song_data_unique.columns[10:26].values)
 song_info = log_song_data_unique.drop(col_to_skip, axis=1)
 
@@ -65,91 +72,6 @@ downsample by latitude and longitude
 #     lambda x: x.sample(1, random_state=42)).reset_index(drop=True)
 
 """
-Frequency of syllable clusters and syllable categories: Two plots for paper
-"""
-my_dpi = 96
-sns.set(style='white')
-sns.set_context({"figure.figsize": (20, 7)})
-
-
-# for the legend, get the total number of recordings in each region
-print(combined_table.groupby('Region').size().reset_index(name='count')[['Region', 'count']])
-
-# get order of syllable categories from ones with most to least number of recordings
-temp = combined_table.groupby(['Category']).size().reset_index(name='numInCategory')
-temp = temp.sort_values(by='numInCategory')
-orderByNumInCategory = temp.Category.values.tolist()
-
-# within syllable category, get the order of syllable clusters from ones with most to least number of recordings
-temp2 = combined_table.groupby(['Category', 'ClusterNoAdjusted']).size().reset_index(name='numInCluster')
-temp2['Category'] = temp2.Category.astype('category', ordered=True, categories=orderByNumInCategory)
-temp2 = temp2.sort_values(['Category', 'numInCluster'], ascending=False)
-orderByCatThenByNumInCluster = temp2.ClusterNoAdjusted.values.tolist()
-
-#####PLOT 1: Geo chippies Fig. A
-# raw counts (not normalized)
-# sort by type (type with most to type with least); within type sort by cluster with most to least
-# stack counts in regions
-freq_clusters = combined_table.groupby(['Region', 'ClusterNoAdjusted']).size().reset_index(name='count').pivot(
-    columns='Region', index='ClusterNoAdjusted')
-# use the previously found order to order the cluster numbers
-freq_clusters['clusters_cat'] = pd.Categorical(
-    freq_clusters.index.values,
-    categories=orderByCatThenByNumInCluster,
-    ordered=True
-)
-freq_clusters = freq_clusters.sort_values('clusters_cat')
-freq_clusters = freq_clusters.drop('clusters_cat', axis=1)
-
-# plot and save
-ax = freq_clusters.plot(kind='bar', stacked=True, width=1, grid=None, fontsize=10,
-                        color=['#1f78b4', 'gray', '#f17300', '#33a02c'], edgecolor='black')
-plt.tight_layout()
-# plt.savefig(
-#     "C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesProject\StatsOfFinalData_withReChipperReExported/SyllableAnalysis"
-#     "/SyllableFrequency_counts_sortedByCatThenByNumInCluster" + '.pdf', type='pdf',
-#     bbox_inches='tight',
-#     transparent=True)
-plt.show()
-plt.close()
-
-#####PLOT 2 Geo Chippies Fig. B
-# normalized by # recordings in each region
-# sort by type (type with most to type with least); within type sort by cluster
-
-# group by region and syllable category
-freq_clusters = combined_table.groupby(['Region', 'Category']).size().reset_index(name='count')
-
-# control for number of recordings per region
-num_rec_per_region = freq_clusters.groupby('Region')['count'].transform('sum')
-freq_clusters['count'] = freq_clusters['count'].div(num_rec_per_region)
-freq_clusters = freq_clusters.pivot(columns='Region', index='Category')
-freq_clusters.columns = freq_clusters.columns.droplevel()
-
-# sort the categories from one with most recordings to least
-freq_clusters['category_cat'] = pd.Categorical(
-    freq_clusters.index.values,
-    categories=orderByNumInCategory[::-1],
-    ordered=True
-)
-freq_clusters = freq_clusters.sort_values('category_cat')
-freq_clusters = freq_clusters.drop('category_cat', axis=1)
-
-# sort the regions
-freq_clusters = freq_clusters.reindex_axis(['east', 'west', 'south', 'mid'], axis=1)
-
-# plot and save figure
-ax = freq_clusters.plot(kind='bar', stacked=False, width=0.5, grid=None, fontsize=10,
-                        color=['#1f78b4', '#33a02c', '#f17300', 'gray'], edgecolor='black', rot=0)
-plt.tight_layout()
-# plt.savefig(
-#     "C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesProject\StatsOfFinalData_withReChipperReExported/SyllableAnalysis"
-#     "/SyllableCategory_normByRecNumInRegion_sortedByCatThenByNumInCluster" + '.pdf', type='pdf', bbox_inches='tight',
-#     transparent=True)
-plt.show()
-plt.close()
-
-"""
 Make an output table for supplement that give the total number of recordings in each syllable cluster, the earliest 
 and latest observation of such syllable and number of such syllable recorded in the east, west, mid, south. 
 """
@@ -166,25 +88,25 @@ earliest_latest_rec = combined_table.assign(EarliestYear=combined_table['Recordi
     'RecordingYear'].abs()).groupby('ClusterNoAdjusted').agg({'EarliestYear': 'min', 'LatestYear': 'max'})
 earliest_latest_rec = earliest_latest_rec.fillna(0).astype(int)
 
-cluster_regional_spread = combined_table.groupby(['Region', 'ClusterNoAdjusted']).size()\
-    .reset_index(name='num_in_region').pivot(columns='Region', index='ClusterNoAdjusted')
-cluster_regional_spread.columns = cluster_regional_spread.columns.droplevel()
-cluster_regional_spread = cluster_regional_spread.fillna(0).astype(int)
+summary_table = pd.concat([cluster_num_rec, earliest_latest_rec, cluster_category], axis=1)
+summary_table = summary_table.reindex_axis(['NumberOfRecordings', 'EarliestYear', 'LatestYear', 'Category'], axis=1)
 
-summary_table = pd.concat([cluster_num_rec, earliest_latest_rec, cluster_regional_spread, cluster_category], axis=1)
-summary_table = summary_table.reindex_axis(['NumberOfRecordings', 'EarliestYear', 'LatestYear', 'east', 'west',
-                                           'south', 'mid', 'Category'], axis=1)
-# summary_table.to_csv('C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesProject\StatsOfFinalData_withReChipperReExported'
-#                      '/SyllableAnalysis/SyllableClusterSummaryTable.csv')
+if save:
+    summary_table.to_csv(save_path + '/SyllableClusterSummaryTable.csv')
 
-######PLOT 3: common long-lived lifespans
-# use this information to create a histogram of the lifespan of the syllable clusters (with hues for quartiles of
-# most to least prevalent syllables)
+"""
+PLOT 3: common long-lived lifespans
+use the summary table information to create a histogram of the lifespan of the 
+syllable clusters (with hues for quartiles of most to least prevalent 
+syllables)
+"""
 my_dpi = 96
 sns.set(style='white')
 sns.set_context({"figure.figsize": (20, 7)})
 
+# remove recordings without a recording year (this was 4 songs)
 summary_table_yr = summary_table[summary_table['EarliestYear'] != 0]
+# calculate lifespan
 summary_table_yr = summary_table_yr.assign(Lifespan=(summary_table_yr['LatestYear'] - summary_table_yr[
     'EarliestYear'] + 1))
 
@@ -202,15 +124,21 @@ ax = lifespan_quantile.plot(kind='bar', stacked=True, grid=None, width=1, fontsi
                             color=['#cbc9e2', '#9e9ac8', '#756bb1', '#54278f'])# sns.color_palette("PRGn", 10))
 
 plt.tight_layout()
-# plt.savefig(
-#     "C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesProject\StatsOfFinalData_withReChipperReExported/SyllableAnalysis"
-#     "/HistogramOfClusterLifespans_stackedQuantiles" + '.pdf', type='pdf', bbox_inches='tight',
-#     transparent=True)
+
+if save:
+    plt.savefig(save_path + "/HistogramOfClusterLifespans_stackedQuantiles"
+                + '.pdf',
+                type='pdf',
+                bbox_inches='tight',
+                transparent=True)
 plt.show()
 plt.close()
 
-####PLOT 4: number of recordings vs. percent syllable types
-# now make histogram of number of syllable types vs number of birds (aka number of recordings_ with each type).
+"""
+PLOT 4: number of recordings vs. percent syllable types
+make histogram of number of syllable types vs number of birds 
+(aka number of recordings_ with each type).
+"""
 my_dpi = 96
 sns.set(style='white')
 sns.set_context({"figure.figsize": (15, 7)})
@@ -236,15 +164,20 @@ ax = numSyllablesWithNumRecordings.plot(kind='bar', use_index=True, y=['PercentO
                                         width=1, fontsize=10, edgecolor='black', color='#cbc9e2', rot=0)
 
 plt.tight_layout()
-# plt.savefig(
-#     "C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesProject\StatsOfFinalData_withReChipperReExported/SyllableAnalysis"
-#     "/HistogramOfNumberOfRecordingsVSPercentOfTypes" + '.pdf', type='pdf', bbox_inches='tight',
-#     transparent=True)
+
+if save:
+    plt.savefig(save_path + "/HistogramOfNumberOfRecordingsVSPercentOfTypes"
+                + '.pdf',
+                type='pdf',
+                bbox_inches='tight',
+                transparent=True)
 plt.show()
 plt.close()
 
 
-####Look at what is common in syllables that are short or long-lived
+"""
+Look at what is common in syllables that are short or long-lived
+"""
 
 my_dpi = 96
 sns.set(style='white')
@@ -272,14 +205,15 @@ numSyllTypesWithLifespan = numSyllTypesWithLifespan.reindex_axis(['short-lived',
 ax = numSyllTypesWithLifespan.plot(kind='bar', stacked=False, width=0.5, grid=None, fontsize=10,
                         color=['#cbc9e2', '#54278f'], edgecolor='black', rot=0)
 plt.tight_layout()
-# plt.savefig(
-#     "C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesProject\StatsOfFinalData_withReChipperReExported/SyllableAnalysis"
-#     "/Longevity_SyllableCategories" + '.pdf', type='pdf', bbox_inches='tight',
-#     transparent=True)
+
+if save:
+    plt.savefig(save_path + "/Longevity_SyllableCategories"
+                + '.pdf',
+                type='pdf',
+                bbox_inches='tight',
+                transparent=True)
 plt.show()
 plt.close()
-
-sys.exit()
 
 """
 BOX PLOTS and WILCOXON OF SONG FEATURES FOR LONGEVITY
@@ -349,14 +283,20 @@ for key, value in log_var.items():
     plt.setp(ax.spines.values(), linewidth=2)
     ax.get_yaxis().set_major_formatter(FuncFormatter(lambda x, p: "%.1f" % (np.exp(x))))
 
-    # plt.savefig("C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesProject\StatsOfFinalData_withReChipperReExported/SyllableAnalysis"
-    #             "/SyllableBoxPlots/" + combined_table_withFeatures.columns[key] + '_noLogAxis_largerFont' + '.pdf', type='pdf', dpi=fig.dpi,
-    #             bbox_inches='tight', transparent=True)
-    # plt.cla()
-    # plt.clf()
-    plt.close()
+    if save:
+        plt.savefig(save_path + "/SyllableBoxPlots/"
+                    + combined_table_withFeatures.columns[key]
+                    + '_noLogAxis_largerFont'
+                    + '.pdf',
+                    type='pdf',
+                    dpi=fig.dpi,
+                    bbox_inches='tight',
+                    transparent=True)
+        plt.cla()
+        plt.clf()
+        plt.close()
 
-    # plt.show()
+    plt.show()
 
 # take e^x for each variable and also convert from Hz to kHz or ms to seconds
 for key, value in log_convert_var.items():
@@ -385,14 +325,20 @@ for key, value in log_convert_var.items():
     plt.setp(ax.spines.values(), linewidth=2)
     ax.get_yaxis().set_major_formatter(FuncFormatter(lambda x, p: "%.1f" % (np.exp(x)/1000)))
 
-    # plt.savefig("C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesProject\StatsOfFinalData_withReChipperReExported/SyllableAnalysis"
-    #             "/SyllableBoxPlots/" + combined_table_withFeatures.columns[key] + '_noLogAxis_largerFont' + '.pdf', type='pdf', dpi=fig.dpi,
-    #             bbox_inches='tight', transparent=True)
-    # plt.cla()
-    # plt.clf()
-    plt.close()
+    if save:
+        plt.savefig(save_path + "/SyllableBoxPlots/"
+                    + combined_table_withFeatures.columns[key]
+                    + '_noLogAxis_largerFont'
+                    + '.pdf',
+                    type='pdf',
+                    dpi=fig.dpi,
+                    bbox_inches='tight',
+                    transparent=True)
+        plt.cla()
+        plt.clf()
+        plt.close()
 
-    # plt.show()
+    plt.show()
 
 # take e^x for each variable and convert from 1/ms to 1/seconds
 for key, value in log_convert_inverse_var.items():
@@ -421,14 +367,20 @@ for key, value in log_convert_inverse_var.items():
     plt.setp(ax.spines.values(), linewidth=2)
     ax.get_yaxis().set_major_formatter(FuncFormatter(lambda x, p: "%.1f" % (np.exp(x)*1000)))
 
-    # plt.savefig("C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesProject\StatsOfFinalData_withReChipperReExported/SyllableAnalysis"
-    #             "/SyllableBoxPlots/" + combined_table_withFeatures.columns[key] + '_noLogAxis_largerFont' + '.pdf', type='pdf', dpi=fig.dpi,
-    #             bbox_inches='tight', transparent=True)
-    # plt.cla()
-    # plt.clf()
-    plt.close()
+    if save:
+        plt.savefig(save_path + "/SyllableBoxPlots/"
+                    + combined_table_withFeatures.columns[key]
+                    + '_noLogAxis_largerFont'
+                    + '.pdf',
+                    type='pdf',
+                    dpi=fig.dpi,
+                    bbox_inches='tight',
+                    transparent=True)
+        plt.cla()
+        plt.clf()
+        plt.close()
 
-    # plt.show()
+    plt.show()
 
 # are not log(value) so no need to take exponential and no conversion
 for key, value in no_log.items():
@@ -457,14 +409,20 @@ for key, value in no_log.items():
     plt.setp(ax.spines.values(), linewidth=2)
     ax.get_yaxis().set_major_formatter(FuncFormatter(lambda x, p: "%.1f" % x))
 
-    # plt.savefig("C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesProject\StatsOfFinalData_withReChipperReExported/SyllableAnalysis"
-    #             "/SyllableBoxPlots/" + combined_table_withFeatures.columns[key] + '_noLogAxis_largerFont' + '.pdf', type='pdf', dpi=fig.dpi,
-    #             bbox_inches='tight', transparent=True)
-    # plt.cla()
-    # plt.clf()
-    plt.close()
+    if save:
+        plt.savefig(save_path + "/SyllableBoxPlots/"
+                    + combined_table_withFeatures.columns[key]
+                    + '_noLogAxis_largerFont'
+                    + '.pdf',
+                    type='pdf',
+                    dpi=fig.dpi,
+                    bbox_inches='tight',
+                    transparent=True)
+        plt.cla()
+        plt.clf()
+        plt.close()
 
-    # plt.show()
+    plt.show()
 
 # are not log(value) so no need to take exponential, convert from Hz to kHz
 for key, value in no_log_convert.items():
@@ -493,43 +451,51 @@ for key, value in no_log_convert.items():
     plt.setp(ax.spines.values(), linewidth=2)
     ax.get_yaxis().set_major_formatter(FuncFormatter(lambda x, p: "%.1f" % (x/1000)))
 
-    # plt.savefig("C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesProject\StatsOfFinalData_withReChipperReExported/SyllableAnalysis"
-    #             "/SyllableBoxPlots/" + combined_table_withFeatures.columns[key] + '_noLogAxis_largerFont' + '.pdf', type='pdf', dpi=fig.dpi,
-    #             bbox_inches='tight', transparent=True)
-    # plt.cla()
-    # plt.clf()
-    plt.close()
+    if save:
+        plt.savefig(save_path + "/SyllableBoxPlots/"
+                    + combined_table_withFeatures.columns[key]
+                    + '_noLogAxis_largerFont'
+                    + '.pdf',
+                    type='pdf',
+                    dpi=fig.dpi,
+                    bbox_inches='tight',
+                    transparent=True)
+        plt.cla()
+        plt.clf()
+        plt.close()
 
-    # plt.show()
+    plt.show()
 
 """"
 Wilcoxon Ranksums
 """
+if save:
+    #16 song variables
+    with open(save_path +
+              '/SyllableBoxPlots/longevitySongFeatures_WilcoxonRanksums.csv',
+              'w', newline='') as file:
+        filewriter = csv.writer(file, delimiter=',')
+        filewriter.writerow(['Song Feature',
+                             'Short-Lived vs Long-Lived p-value'])
+        for sv in combined_table_withFeatures.columns[6:22]:
+            s = combined_table_withFeatures.loc[combined_table_withFeatures['longevity'] == 'short-lived', sv]
+            l = combined_table_withFeatures.loc[combined_table_withFeatures['longevity'] == 'long-lived', sv]
 
-# #16 song variables
-# with open('C:/Users/abiga/Box Sync/Abigail_Nicole/ChippiesProject/StatsOfFinalData_withReChipperReExported'
-#           '/SyllableAnalysis/SyllableBoxPlots/longevitySongFeatures_WilcoxonRanksums.csv', 'wb') as file:
-#     filewriter = csv.writer(file, delimiter=',')
-#     filewriter.writerow(['Song Feature',
-#                          'Short-Lived vs Long-Lived p-value'])
-#     for sv in combined_table_withFeatures.columns[6:22]:
-#         s = combined_table_withFeatures.loc[combined_table_withFeatures['longevity'] == 'short-lived', sv]
-#         l = combined_table_withFeatures.loc[combined_table_withFeatures['longevity'] == 'long-lived', sv]
-#
-#         filewriter.writerow([sv, ranksums(s, l)[1]])
-#
-# #longitude
-# metadata = ['Longitude']
-# with open('C:/Users/abiga/Box Sync/Abigail_Nicole/ChippiesProject/StatsOfFinalData_withReChipperReExported'
-#           '/SyllableAnalysis/SyllableBoxPlots/longevityLongitude_WilcoxonRanksums.csv', 'wb') as file:
-#     filewriter = csv.writer(file, delimiter=',')
-#     filewriter.writerow(['Metadata',
-#                          'Short-Lived vs Long-Lived p-value'])
-#     for sv in metadata:
-#         s = combined_table_withFeatures.loc[combined_table_withFeatures['longevity'] == 'short-lived', sv]
-#         l = combined_table_withFeatures.loc[combined_table_withFeatures['longevity'] == 'long-lived', sv]
-#
-#         filewriter.writerow([sv, ranksums(s, l)[1]])
+            filewriter.writerow([sv, ranksums(s, l)[1]])
+
+    #longitude
+    metadata = ['Longitude']
+    with open(save_path +
+              '/SyllableBoxPlots/longevityLongitude_WilcoxonRanksums.csv',
+              'w', newline='') as file:
+        filewriter = csv.writer(file, delimiter=',')
+        filewriter.writerow(['Metadata',
+                             'Short-Lived vs Long-Lived p-value'])
+        for sv in metadata:
+            s = combined_table_withFeatures.loc[combined_table_withFeatures['longevity'] == 'short-lived', sv]
+            l = combined_table_withFeatures.loc[combined_table_withFeatures['longevity'] == 'long-lived', sv]
+
+            filewriter.writerow([sv, ranksums(s, l)[1]])
 
 
 
