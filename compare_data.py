@@ -1,24 +1,21 @@
 from __future__ import print_function
-from collapse_data import collapse_array
-import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
-from matplotlib.backends.backend_pdf import PdfPages
 import seaborn as sns; sns.set()
-from scipy import stats
 import numpy as np
-import csv
-from scipy.stats import ranksums, chisquare, anderson_ksamp
-from matplotlib.ticker import FuncFormatter
 import os
+from scipy.stats import chisquare, anderson_ksamp
+
 import rpy2.robjects.numpy2ri
 from rpy2.robjects.packages import importr
 rpy2.robjects.numpy2ri.activate()
-
 r_stats = importr('stats')
+
+from collapse_data import collapse_array
+from combine_recording_data import load_recording_data
 
 
 """
@@ -85,45 +82,11 @@ save_path = "C:/Users/abiga/Box " \
 Load in real song data
 """
 
-# song meta data
-data_path1 = 'C:/Users/abiga\Box ' \
-             'Sync\Abigail_Nicole\ChippiesProject\FinalDataCompilation' \
-             '/AnimalBehaviour_SupplementalDataTable2_addedMid.csv'
-log_song_data = pd.read_csv(data_path1, header=0, index_col=None)
-log_song_data_unique = log_song_data.loc[log_song_data[
-    'ComparedStatus'].isin(['unique', 'use'])].copy().reset_index(drop=True)
-
-# get rid of unnecessary metadata and the song stat variables
-col_to_skip = ['FromDatabase', 'ComparedStatus', 'RecordingDay',
-               'RecordingMonth', 'Region'] + \
-              list(log_song_data_unique.columns[10:26].values)
-song_info = log_song_data_unique.drop(col_to_skip, axis=1)
+combined_table = load_recording_data()
 
 """
-Load in real syllable cluster data
+downsample by latitude and longitude
 """
-# syllable clusters
-data_path2 = "C:/Users/abiga\Box " \
-             "Sync\Abigail_Nicole\ChippiesProject" \
-             "\StatsOfFinalData_withReChipperReExported\SyllableAnalysis" \
-             "\SyllableClusters_820UniqueUse.csv"
-cluster_data = pd.read_csv(data_path2, header=0, index_col=None)
-
-col_to_skip2 = ['SyllableNumber', 'ClusterNo']
-cluster_data = cluster_data.drop(col_to_skip2, axis=1)
-cluster_data['ClusterNoAdjusted'] = cluster_data[
-    'ClusterNoAdjusted'].astype(int)
-
-"""
-combine tables using CatalogNo
-"""
-combined_table = song_info.merge(cluster_data, how='inner', on='CatalogNo')
-combined_table = combined_table.drop_duplicates(['CatalogNo',
-                                                 'ClusterNoAdjusted'],
-                                                keep='first')
-combined_table = combined_table.drop(['FileName'], axis=1)
-
-## downsample by latitude and longitude
 # combined_table = combined_table.groupby(
 #     ['Latitude', 'Longitude']).apply(
 #     lambda x: x.sample(1, random_state=42)).reset_index(drop=True)

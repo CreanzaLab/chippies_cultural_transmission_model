@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib
@@ -10,20 +9,16 @@ import os
 import itertools
 import model_functions as fns
 import time
-import sys
+
+from combine_recording_data import load_recording_data
 
 """
 Load in real data to get sampling frequency
 """
-
-chippies = pd.read_csv(
-    "C:/Users/abiga/PycharmProjects"
-    "/CreanzaLab_chippies_cultural_transmission_model/citizen_science_data"
-    "/AnimalBehaviour_SupplementalDataTable2_addedMid.csv")
+chippies = load_recording_data()
 
 yrs_freq = chippies.RecordingYear.value_counts().sort_index().reindex(range(
     1950, 2018, 1)).fillna(0)
-
 sample_freq = yrs_freq.to_numpy(dtype='int')
 
 """
@@ -35,14 +30,14 @@ home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
            '/RealYearlySamplingFreq/DispersalDist11'
 runs = {}
-model_type = 'directional'
+model_type = 'neutral'
 conformity_factor = 2
 
 iterations = 1000
 dim = 500
 
 mortality_rate = 0.4
-dispersal_rate = 0.1
+# dispersal_rate = 0
 dispersal_dist = 11
 low_syll_type = int(0)  # should not change
 high_syll_type = int(dim ** 2 / 500)
@@ -57,20 +52,21 @@ all_coord = list(itertools.product(range(0, dim), range(0, dim)))
 
 # setup runs with various parameters
 # for p in np.arange(1.0, 10.01, 2.0):
-for p in [0.0001, 0.001, 0.01, 0.1, 1.0]:
-# for p in [0.05]:
-    file_name = model_type + '_' \
-                + str(p) + 'err_' \
-                + str(iterations) + 'iters_' \
-                + str(dim) + 'dim_' \
-                + str(high_syll_type) + 'initSylls_' \
-                + str(int(mortality_rate*100)) + 'mortRate_' \
-                + str(dispersal_rate) + 'dispRate'
-    runs.update({file_name: [model_type, p/100]})
+for d in [0, 0.1, 0.2, 0.3, 0.4, 0.5]:
+    for p in [0.0001, 0.001, 0.01, 0.1, 1.0]:
+        file_name = model_type + '_' \
+                    + str(p) + 'err_' \
+                    + str(iterations) + 'iters_' \
+                    + str(dim) + 'dim_' \
+                    + str(high_syll_type) + 'initSylls_' \
+                    + str(int(mortality_rate*100)) + 'mortRate_' \
+                    + str(d) + 'dispRate'
+        runs.update({file_name: [model_type, p/100, d]})
 
 # iterate through each of the runs, each with unique parameters
 for run, params in runs.items():
     print(run)
+    dispersal_rate = params[2]
     start_time = time.time()
     path = home_dir + '/' + run + '/'
     os.mkdir(path)
