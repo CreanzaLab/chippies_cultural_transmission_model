@@ -102,6 +102,7 @@ syllables)
 """
 my_dpi = 96
 sns.set(style='white')
+sns.set_style('ticks')
 sns.set_context({"figure.figsize": (20, 7)})
 
 # remove recordings without a recording year (this was 4 songs)
@@ -181,6 +182,7 @@ Look at what is common in syllables that are short or long-lived
 
 my_dpi = 96
 sns.set(style='white')
+sns.set_style('ticks')
 sns.set_context({"figure.figsize": (15, 7)})
 
 ###PLOT 5: lifespan by syllable category
@@ -190,6 +192,8 @@ summary_table_yr['lifespan_group'] = np.where(summary_table_yr['Lifespan'] == 1,
     'lifespan_group'])
 summary_table_yr['lifespan_group'] = np.where(summary_table_yr['Lifespan'] >= 50, 'long-lived', summary_table_yr[
     'lifespan_group'])
+summary_table_yr['lifespan_group'] = summary_table_yr[
+    'lifespan_group'].replace('nan', np.nan)
 summary_table_yr = summary_table_yr.dropna(subset=['lifespan_group'])
 
 numSyllTypesWithLifespan = summary_table_yr.groupby(['lifespan_group', 'Category']).size().reset_index(
@@ -261,6 +265,7 @@ for key, value in log_var.items():
     fig = plt.figure(figsize=(7, 11))
     my_dpi = 96
     sns.set(style='white')
+    sns.set_style('ticks')
     ax = sns.boxplot(x='longevity', y=combined_table_withFeatures.columns[key], data=combined_table_withFeatures[['longevity', combined_table_withFeatures.columns[key]]],
                      color='None',
                      fliersize=0, width=0.5,
@@ -303,6 +308,7 @@ for key, value in log_convert_var.items():
     fig = plt.figure(figsize=(7, 11))
     my_dpi = 96
     sns.set(style='white')
+    sns.set_style('ticks')
     ax = sns.boxplot(x='longevity', y=combined_table_withFeatures.columns[key], data=combined_table_withFeatures[['longevity', combined_table_withFeatures.columns[key]]],
                      color='None',
                      fliersize=0, width=0.5,
@@ -345,6 +351,7 @@ for key, value in log_convert_inverse_var.items():
     fig = plt.figure(figsize=(7, 11))
     my_dpi = 96
     sns.set(style='white')
+    sns.set_style('ticks')
     ax = sns.boxplot(x='longevity', y=combined_table_withFeatures.columns[key], data=combined_table_withFeatures[['longevity', combined_table_withFeatures.columns[key]]],
                      color='None',
                      fliersize=0, width=0.5,
@@ -387,6 +394,7 @@ for key, value in no_log.items():
     fig = plt.figure(figsize=(7, 11))
     my_dpi = 96
     sns.set(style='white')
+    sns.set_style('ticks')
     ax = sns.boxplot(x='longevity', y=combined_table_withFeatures.columns[key], data=combined_table_withFeatures[['longevity', combined_table_withFeatures.columns[key]]],
                      color='None',
                      fliersize=0, width=0.5,
@@ -429,6 +437,7 @@ for key, value in no_log_convert.items():
     fig = plt.figure(figsize=(7, 11))
     my_dpi = 96
     sns.set(style='white')
+    sns.set_style('ticks')
     ax = sns.boxplot(x='longevity', y=combined_table_withFeatures.columns[key], data=combined_table_withFeatures[['longevity', combined_table_withFeatures.columns[key]]],
                      color='None',
                      fliersize=0, width=0.5,

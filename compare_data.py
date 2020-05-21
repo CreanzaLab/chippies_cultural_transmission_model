@@ -95,7 +95,7 @@ log_song_data_unique = log_song_data.loc[log_song_data[
 
 # get rid of unnecessary metadata and the song stat variables
 col_to_skip = ['FromDatabase', 'ComparedStatus', 'RecordingDay',
-               'RecordingMonth'] + \
+               'RecordingMonth', 'Region'] + \
               list(log_song_data_unique.columns[10:26].values)
 song_info = log_song_data_unique.drop(col_to_skip, axis=1)
 
@@ -114,7 +114,9 @@ cluster_data = cluster_data.drop(col_to_skip2, axis=1)
 cluster_data['ClusterNoAdjusted'] = cluster_data[
     'ClusterNoAdjusted'].astype(int)
 
-# combine tables using CatalogNo
+"""
+combine tables using CatalogNo
+"""
 combined_table = song_info.merge(cluster_data, how='inner', on='CatalogNo')
 combined_table = combined_table.drop_duplicates(['CatalogNo',
                                                  'ClusterNoAdjusted'],
@@ -201,7 +203,6 @@ for dispRate in dispersals:
     summary_table_yr = summary_table_yr.assign(Lifespan=(summary_table_yr['LatestYear'] - summary_table_yr[
         'EarliestYear'] + 1))
 
-    # print(pd.qcut(summary_table_yr['NumberOfRecordings'], q=5, duplicates='drop'))
     summary_table_yr['quantile'] = pd.qcut(summary_table_yr['NumberOfRecordings'], 5, duplicates='drop', labels=False)
 
     lifespan_quantile = summary_table_yr.groupby(['quantile', 'Lifespan']).size().reset_index(name='count').pivot(
@@ -211,10 +212,6 @@ for dispRate in dispersals:
     # on y-axis
     new_index = list(range(min(lifespan_quantile.index), max(lifespan_quantile.index)+1))
     lifespan_quantile = lifespan_quantile.reindex(new_index)
-
-    # # plot and save figure
-    # ax = lifespan_quantile.plot(kind='bar', stacked=True, grid=None, width=1, fontsize=10, edgecolor='black', rot=0,
-    #                             color=['#cbc9e2', '#9e9ac8', '#756bb1', '#54278f'])# sns.color_palette("PRGn", 10))
 
     print('plot 3 data')
 
@@ -524,6 +521,8 @@ sns.heatmap(numRec_fisher_df.pivot('disp', 'error', 'pval'),
             vmin=0.01,
             vmax=1,
             annot=True)
+plt.xlabel('Learning Error (%)')
+plt.ylabel('Fraction of Dispersal')
 
 plt.tight_layout()
 if save:
