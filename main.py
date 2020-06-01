@@ -30,7 +30,7 @@ home_dir = 'C:/Users/abiga\Box ' \
            'Sync\Abigail_Nicole\ChippiesSyllableModel' \
            '/RealYearlySamplingFreq/DispersalDist11'
 runs = {}
-model_type = 'neutral'
+model_type = 'conformity'
 conformity_factor = 2
 
 iterations = 1000
@@ -52,7 +52,7 @@ all_coord = list(itertools.product(range(0, dim), range(0, dim)))
 
 # setup runs with various parameters
 # for p in np.arange(1.0, 10.01, 2.0):
-for d in [0, 0.1, 0.2, 0.3, 0.4, 0.5]:
+for d in [0.4]:
     for p in [0.0001, 0.001, 0.01, 0.1, 1.0]:
         file_name = model_type + '_' \
                     + str(p) + 'err_' \

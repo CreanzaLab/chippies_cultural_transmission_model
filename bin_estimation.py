@@ -1,5 +1,4 @@
 import numpy as np
-import random
 
 def bin_weight(bins, unbinned_data, bin_count_importance=1,
                bin_size_importance=1, ignore_ones=True):
@@ -50,18 +49,18 @@ def bin_weight(bins, unbinned_data, bin_count_importance=1,
 # fixed variables
 numBinsNonSingleton = 6
 iterations = 1000000
-random.seed(45)
+np.random.seed(45)
 
 # data to be used
-counts_lifespans = [43,  0,  5,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0,
-                    0,  0,  0,  0,  0,  0,  1,  1,  0,  0,  0,  1,  0,  0,
-                    1,  0,  0,  2,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,
-                    1,  1,  0,  2,  2,  1,  2,  0,  0,  3,  1,  0,  4,  3,
-                    2,  4,  4,  2,  2,  3,  1,  1,  3,  4,  1,  1]
+counts_lifespans = [44,  0,  5,  1,  2,  0,  0,  1,  0,  0,  0,  0,  0,  0,
+                    0,  0,  0,  0, 0,  1,  2,  1,  0,  0,  0,  1,  1,  0,
+                    1,  0,  0,  2,  0,  1,  0,  0, 0,  0,  0,  1,  0,  0,
+                    1,  1,  0,  2,  2,  1,  2,  0,  0,  3,  1,  0, 4,  3,
+                    2,  4,  4,  2,  2,  3,  1,  0,  4,  4,  1,  1]
 
 counts_numSyllables = [40,  7,  8,  4,  7, 10,  1,  2,  2,  0,  2,  6,  4,
-                       0,  1,  2,  2,  1,  2,  1,  1,  0,  1,  0,  1,  0,  3,
-                       0,  1,  0,  0,  0,  0,  0,  2,  0,  0,  1]
+                       0,  1,  2,  2,  1, 2,  1,  1,  0,  1,  0,  1,  0,  3,
+                       0,  1,  0,  0,  0,  0,  0,  2,  0, 0,  1]
 
 for counts in [counts_lifespans, counts_numSyllables]:
     # transform counts into the data itself

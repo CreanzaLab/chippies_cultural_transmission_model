@@ -10,13 +10,13 @@ import csv
 from scipy.stats import ranksums
 from matplotlib.ticker import FuncFormatter
 
-from combine_recording_data import load_recording_data
+import combine_recording_data as data_fns
 
 
 """
 Save info
 """
-save = False
+save = True
 save_path = "C:/Users/abiga\Box " \
             "Sync/Abigail_Nicole/ChippiesSongEvolution/Figures"
 
@@ -24,7 +24,7 @@ save_path = "C:/Users/abiga\Box " \
 """
 Load in song data
 """
-combined_table = load_recording_data(song_stats=False)
+combined_table = data_fns.load_recording_data(song_stats=False)
 
 """
 downsample by latitude and longitude
@@ -37,21 +37,8 @@ downsample by latitude and longitude
 Make an output table for supplement that give the total number of recordings in each syllable cluster, the earliest 
 and latest observation of such syllable and number of such syllable recorded in the east, west, mid, south. 
 """
-
-# get total number of recordings for each syllable cluster
-cluster_num_rec = combined_table.groupby('ClusterNoAdjusted').size().reset_index(
-    name='NumberOfRecordings').sort_values('ClusterNoAdjusted').set_index('ClusterNoAdjusted')
-
-cluster_category = combined_table.drop_duplicates('ClusterNoAdjusted')[['ClusterNoAdjusted',
-                                                                        'Category']].sort_values(
-    'ClusterNoAdjusted').set_index('ClusterNoAdjusted')
-
-earliest_latest_rec = combined_table.assign(EarliestYear=combined_table['RecordingYear'].abs(), LatestYear=combined_table[
-    'RecordingYear'].abs()).groupby('ClusterNoAdjusted').agg({'EarliestYear': 'min', 'LatestYear': 'max'})
-earliest_latest_rec = earliest_latest_rec.fillna(0).astype(int)
-
-summary_table = pd.concat([cluster_num_rec, earliest_latest_rec, cluster_category], axis=1)
-summary_table = summary_table.reindex_axis(['NumberOfRecordings', 'EarliestYear', 'LatestYear', 'Category'], axis=1)
+# # get total number of recordings for each syllable cluster
+summary_table = data_fns.create_summary_table(combined_table)
 
 if save:
     summary_table.to_csv(save_path + '/SyllableClusterSummaryTable.csv')
@@ -67,20 +54,7 @@ sns.set(style='white')
 sns.set_style('ticks')
 sns.set_context({"figure.figsize": (20, 7)})
 
-# remove recordings without a recording year (this was 4 songs)
-summary_table_yr = summary_table[summary_table['EarliestYear'] != 0]
-# calculate lifespan
-summary_table_yr = summary_table_yr.assign(Lifespan=(summary_table_yr['LatestYear'] - summary_table_yr[
-    'EarliestYear'] + 1))
-
-print(pd.qcut(summary_table_yr['NumberOfRecordings'], q=5, duplicates='drop'))
-summary_table_yr['quantile'] = pd.qcut(summary_table_yr['NumberOfRecordings'], 5, duplicates='drop', labels=False)
-
-lifespan_quantile = summary_table_yr.groupby(['quantile', 'Lifespan']).size().reset_index(name='count').pivot(
-    columns='quantile', index='Lifespan')
-
-new_index = list(range(min(lifespan_quantile.index), max(lifespan_quantile.index)+1))
-lifespan_quantile = lifespan_quantile.reindex(new_index)
+summary_table_yr, lifespan_quantile = data_fns.append_lifespans(summary_table)
 
 # plot and save figure
 ax = lifespan_quantile.plot(kind='bar', stacked=True, grid=None, width=1, fontsize=10, edgecolor='black', rot=0,
@@ -104,6 +78,7 @@ make histogram of number of syllable types vs number of birds
 """
 my_dpi = 96
 sns.set(style='white')
+sns.set_style('ticks')
 sns.set_context({"figure.figsize": (15, 7)})
 
 numSyllablesWithNumRecordings = summary_table.groupby('NumberOfRecordings').size().reset_index(
@@ -188,7 +163,7 @@ BOX PLOTS and WILCOXON OF SONG FEATURES FOR LONGEVITY
 # get rid of unnecessary metadata and the song stat variables (had to do this using the original dataframe because
 # earlier some of the wanted metada had been dropped previously)
 
-combined_table_withFeatures = load_recording_data(song_stats=True)
+combined_table_withFeatures = data_fns.load_recording_data(song_stats=True)
 
 longevity_dict = summary_table_yr[['lifespan_group']].to_dict()['lifespan_group']
 combined_table_withFeatures['longevity'] = combined_table_withFeatures['ClusterNoAdjusted'].map(longevity_dict)
@@ -444,10 +419,9 @@ if save:
         filewriter = csv.writer(file, delimiter=',')
         filewriter.writerow(['Song Feature',
                              'Short-Lived vs Long-Lived p-value'])
-        for sv in combined_table_withFeatures.columns[6:22]:
+        for sv in combined_table_withFeatures.columns[4:20]:
             s = combined_table_withFeatures.loc[combined_table_withFeatures['longevity'] == 'short-lived', sv]
             l = combined_table_withFeatures.loc[combined_table_withFeatures['longevity'] == 'long-lived', sv]
-
             filewriter.writerow([sv, ranksums(s, l)[1]])
 
     #longitude

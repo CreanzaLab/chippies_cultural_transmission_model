@@ -15,7 +15,7 @@ rpy2.robjects.numpy2ri.activate()
 r_stats = importr('stats')
 
 from collapse_data import collapse_array
-from combine_recording_data import load_recording_data
+import combine_recording_data as data_fns
 
 
 """
@@ -49,7 +49,16 @@ c_directional = ['#54278f',
 
 
 save = True
-file_name_base = 'conformity_degError_'
+get_models_w = 'conformity'
+file_name_base = get_models_w + '_degError_'
+
+if get_models_w == 'neutral':
+    c = c_neutral
+elif get_models_w == 'directional':
+    c = c_directional
+elif get_models_w == 'conformity':
+    c = c_conformity
+
 
 dispersals = ['0dispRate',
               '0.1dispRate',
@@ -61,18 +70,12 @@ dispersals = ['0dispRate',
 # file_name = 'neutral_degError_' + dispRate
 
 load_errors = [0.0001, 0.001, 0.01, 0.1, 1.0]
-# load_errors = [0.05, 0.1, 0.15]
-# load_errors = ['1e-08']
-# load_errors = [0.05]
 
 collapse = True
 if collapse:
     collapse_folder = 'Collapsed_optimizedBins/'
 else:
     collapse_folder = ''
-
-get_models_w = 'conformity'
-c = c_conformity
 
 save_path = "C:/Users/abiga/Box " \
             "Sync/Abigail_Nicole/ChippiesSyllableModel" \
@@ -82,7 +85,7 @@ save_path = "C:/Users/abiga/Box " \
 Load in real song data
 """
 
-combined_table = load_recording_data()
+combined_table = data_fns.load_recording_data()
 
 """
 downsample by latitude and longitude
@@ -133,19 +136,8 @@ for dispRate in dispersals:
     """
 
     # get total number of recordings for each syllable cluster
-    cluster_num_rec = combined_table.groupby('ClusterNoAdjusted').size().reset_index(
-        name='NumberOfRecordings').sort_values('ClusterNoAdjusted').set_index('ClusterNoAdjusted')
+    summary_table = data_fns.create_summary_table(combined_table)
 
-    cluster_category = combined_table.drop_duplicates('ClusterNoAdjusted')[['ClusterNoAdjusted',
-                                                                            'Category']].sort_values(
-        'ClusterNoAdjusted').set_index('ClusterNoAdjusted')
-
-    earliest_latest_rec = combined_table.assign(EarliestYear=combined_table['RecordingYear'].abs(), LatestYear=combined_table[
-        'RecordingYear'].abs()).groupby('ClusterNoAdjusted').agg({'EarliestYear': 'min', 'LatestYear': 'max'})
-    earliest_latest_rec = earliest_latest_rec.fillna(0).astype(int)
-
-    summary_table = pd.concat([cluster_num_rec, earliest_latest_rec, cluster_category], axis=1)
-    summary_table = summary_table.reindex_axis(['NumberOfRecordings', 'EarliestYear', 'LatestYear', 'Category'], axis=1)
     # summary_table.to_csv('C:/Users/abiga\Box Sync\Abigail_Nicole\ChippiesProject\StatsOfFinalData_withReChipperReExported'
     #                      '/SyllableAnalysis/SyllableClusterSummaryTable.csv')
 
@@ -162,19 +154,7 @@ for dispRate in dispersals:
     sns.set_context({"figure.figsize": (20, 7)})
     plt.figure(3)
 
-    summary_table_yr = summary_table[summary_table['EarliestYear'] != 0]
-    summary_table_yr = summary_table_yr.assign(Lifespan=(summary_table_yr['LatestYear'] - summary_table_yr[
-        'EarliestYear'] + 1))
-
-    summary_table_yr['quantile'] = pd.qcut(summary_table_yr['NumberOfRecordings'], 5, duplicates='drop', labels=False)
-
-    lifespan_quantile = summary_table_yr.groupby(['quantile', 'Lifespan']).size().reset_index(name='count').pivot(
-        columns='quantile', index='Lifespan')
-
-    # make index not skip missing lifespans, makes it so lifespans can be used
-    # on y-axis
-    new_index = list(range(min(lifespan_quantile.index), max(lifespan_quantile.index)+1))
-    lifespan_quantile = lifespan_quantile.reindex(new_index)
+    summary_table_yr, lifespan_quantile = data_fns.append_lifespans(summary_table)
 
     print('plot 3 data')
 
@@ -462,11 +442,17 @@ if save:
                             index=False)
 
 
+sns.set_context({"figure.figsize": (7, 3.5)})
+ax = sns.heatmap(lifespan_fisher_df.pivot('disp', 'error', 'pval'),
+                 cmap='PuOr',
+                 center=0.01,
+                 vmin=0,
+                 vmax=1,
+                 annot=True,
+                 fmt='.2G',
+                 annot_kws={'size': 12})
+ax.invert_yaxis()
 
-sns.heatmap(lifespan_fisher_df.pivot('disp', 'error', 'pval'),
-            vmin=0.01,
-            vmax=1,
-            annot=True)
 plt.xlabel('Learning Error (%)')
 plt.ylabel('Fraction of Dispersal')
 
@@ -474,16 +460,23 @@ plt.tight_layout()
 if save:
     plt.savefig(save_path +
                 "/Hist_LifespansVsPercentTypes/" + collapse_folder +
-                file_name_base + 'lifespan_fisher_df.pdf',
+                file_name_base + 'lifespan_fisher_df_PuOr_center_flipAx.pdf',
                 type='pdf', bbox_inches='tight',
                 transparent=True)
 plt.show()
 plt.close()
 
-sns.heatmap(numRec_fisher_df.pivot('disp', 'error', 'pval'),
-            vmin=0.01,
-            vmax=1,
-            annot=True)
+ax = sns.heatmap(numRec_fisher_df.pivot('disp', 'error', 'pval'),
+                 cmap='PuOr',
+                 center=0.01,
+                 vmin=0,
+                 vmax=1,
+                 annot=True,
+                 fmt='.2G',
+                 annot_kws={'size': 12})
+ax.invert_yaxis()
+
+# plt.ylim(0, 0.5)
 plt.xlabel('Learning Error (%)')
 plt.ylabel('Fraction of Dispersal')
 
@@ -491,7 +484,7 @@ plt.tight_layout()
 if save:
     plt.savefig(save_path +
                 "/Hist_NumRecVsPercentTypes/" + collapse_folder +
-                file_name_base + 'numRec_fisher_df.pdf',
+                file_name_base + 'numRec_fisher_df_PuOr_center_flipAx.pdf',
                 type='pdf', bbox_inches='tight',
                 transparent=True)
 plt.show()
