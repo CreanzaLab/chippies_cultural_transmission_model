@@ -1,17 +1,16 @@
 from __future__ import print_function
-import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
-from matplotlib.backends.backend_pdf import PdfPages
 import seaborn as sns; sns.set()
-from scipy import stats
 import numpy as np
 import csv
 from scipy.stats import ranksums
 from matplotlib.ticker import FuncFormatter
+
+import combine_recording_data as data_fns
 
 
 """
@@ -25,44 +24,7 @@ save_path = "C:/Users/abiga\Box " \
 """
 Load in song data
 """
-
-# song meta data
-data_path1 = 'C:/Users/abiga\Box ' \
-             'Sync\Abigail_Nicole\ChippiesProject\FinalDataCompilation' \
-             '/AnimalBehaviour_SupplementalDataTable2_addedMid.csv'
-log_song_data = pd.read_csv(data_path1, header=0, index_col=None)
-log_song_data_unique = log_song_data.loc[log_song_data[
-    'ComparedStatus'].isin(['unique', 'use'])].copy().reset_index(drop=True)
-
-# get rid of unnecessary metadata and the song stat variables
-col_to_skip = ['FromDatabase', 'ComparedStatus', 'RecordingDay',
-               'RecordingMonth', 'Region'] + \
-              list(log_song_data_unique.columns[10:26].values)
-song_info = log_song_data_unique.drop(col_to_skip, axis=1)
-
-"""
-Load in syllable cluster data
-"""
-# syllable clusters
-data_path2 = "C:/Users/abiga\Box " \
-             "Sync\Abigail_Nicole\ChippiesProject" \
-             "\StatsOfFinalData_withReChipperReExported\SyllableAnalysis" \
-             "\SyllableClusters_820UniqueUse.csv"
-cluster_data = pd.read_csv(data_path2, header=0, index_col=None)
-
-col_to_skip2 = ['SyllableNumber', 'ClusterNo']
-cluster_data = cluster_data.drop(col_to_skip2, axis=1)
-cluster_data['ClusterNoAdjusted'] = cluster_data[
-    'ClusterNoAdjusted'].astype(int)
-
-"""
-combine tables using CatalogNo
-"""
-combined_table = song_info.merge(cluster_data, how='inner', on='CatalogNo')
-combined_table = combined_table.drop_duplicates(['CatalogNo',
-                                                 'ClusterNoAdjusted'],
-                                                keep='first')
-combined_table = combined_table.drop(['FileName'], axis=1)
+combined_table = data_fns.load_recording_data(song_stats=False)
 
 """
 downsample by latitude and longitude
@@ -75,21 +37,8 @@ downsample by latitude and longitude
 Make an output table for supplement that give the total number of recordings in each syllable cluster, the earliest 
 and latest observation of such syllable and number of such syllable recorded in the east, west, mid, south. 
 """
-
-# get total number of recordings for each syllable cluster
-cluster_num_rec = combined_table.groupby('ClusterNoAdjusted').size().reset_index(
-    name='NumberOfRecordings').sort_values('ClusterNoAdjusted').set_index('ClusterNoAdjusted')
-
-cluster_category = combined_table.drop_duplicates('ClusterNoAdjusted')[['ClusterNoAdjusted',
-                                                                        'Category']].sort_values(
-    'ClusterNoAdjusted').set_index('ClusterNoAdjusted')
-
-earliest_latest_rec = combined_table.assign(EarliestYear=combined_table['RecordingYear'].abs(), LatestYear=combined_table[
-    'RecordingYear'].abs()).groupby('ClusterNoAdjusted').agg({'EarliestYear': 'min', 'LatestYear': 'max'})
-earliest_latest_rec = earliest_latest_rec.fillna(0).astype(int)
-
-summary_table = pd.concat([cluster_num_rec, earliest_latest_rec, cluster_category], axis=1)
-summary_table = summary_table.reindex_axis(['NumberOfRecordings', 'EarliestYear', 'LatestYear', 'Category'], axis=1)
+# # get total number of recordings for each syllable cluster
+summary_table = data_fns.create_summary_table(combined_table)
 
 if save:
     summary_table.to_csv(save_path + '/SyllableClusterSummaryTable.csv')
@@ -105,20 +54,7 @@ sns.set(style='white')
 sns.set_style('ticks')
 sns.set_context({"figure.figsize": (20, 7)})
 
-# remove recordings without a recording year (this was 4 songs)
-summary_table_yr = summary_table[summary_table['EarliestYear'] != 0]
-# calculate lifespan
-summary_table_yr = summary_table_yr.assign(Lifespan=(summary_table_yr['LatestYear'] - summary_table_yr[
-    'EarliestYear'] + 1))
-
-print(pd.qcut(summary_table_yr['NumberOfRecordings'], q=5, duplicates='drop'))
-summary_table_yr['quantile'] = pd.qcut(summary_table_yr['NumberOfRecordings'], 5, duplicates='drop', labels=False)
-
-lifespan_quantile = summary_table_yr.groupby(['quantile', 'Lifespan']).size().reset_index(name='count').pivot(
-    columns='quantile', index='Lifespan')
-
-new_index = list(range(min(lifespan_quantile.index), max(lifespan_quantile.index)+1))
-lifespan_quantile = lifespan_quantile.reindex(new_index)
+summary_table_yr, lifespan_quantile = data_fns.append_lifespans(summary_table)
 
 # plot and save figure
 ax = lifespan_quantile.plot(kind='bar', stacked=True, grid=None, width=1, fontsize=10, edgecolor='black', rot=0,
@@ -142,6 +78,7 @@ make histogram of number of syllable types vs number of birds
 """
 my_dpi = 96
 sns.set(style='white')
+sns.set_style('ticks')
 sns.set_context({"figure.figsize": (15, 7)})
 
 numSyllablesWithNumRecordings = summary_table.groupby('NumberOfRecordings').size().reset_index(
@@ -149,12 +86,12 @@ numSyllablesWithNumRecordings = summary_table.groupby('NumberOfRecordings').size
 numSyllablesWithNumRecordings['PercentOfTypes'] = numSyllablesWithNumRecordings['counts']/len(
     summary_table)
 
-above_thresh = numSyllablesWithNumRecordings[numSyllablesWithNumRecordings['NumberOfRecordings'] >= 20]
-percent_numRec = (above_thresh['NumberOfRecordings'].astype(float)*above_thresh['counts']).sum()/(
-    numSyllablesWithNumRecordings['NumberOfRecordings']*numSyllablesWithNumRecordings['counts']).sum()
-percent_syllTypes = above_thresh['PercentOfTypes'].sum()
-print('percent num rec', percent_numRec)
-print('percent syll types', percent_syllTypes)
+# above_thresh = numSyllablesWithNumRecordings[numSyllablesWithNumRecordings['NumberOfRecordings'] >= 20]
+# percent_numRec = (above_thresh['NumberOfRecordings'].astype(float)*above_thresh['counts']).sum()/(
+#     numSyllablesWithNumRecordings['NumberOfRecordings']*numSyllablesWithNumRecordings['counts']).sum()
+# percent_syllTypes = above_thresh['PercentOfTypes'].sum()
+# print('percent num rec', percent_numRec)
+# print('percent syll types', percent_syllTypes)
 
 numSyllablesWithNumRecordings.set_index('NumberOfRecordings', inplace=True)
 new_index2 = list(range(min(numSyllablesWithNumRecordings.index), max(numSyllablesWithNumRecordings.index)+1))
@@ -225,14 +162,8 @@ BOX PLOTS and WILCOXON OF SONG FEATURES FOR LONGEVITY
 
 # get rid of unnecessary metadata and the song stat variables (had to do this using the original dataframe because
 # earlier some of the wanted metada had been dropped previously)
-col_to_skip_notFeatures = ['FromDatabase', 'ComparedStatus', 'RecordingDay', 'RecordingMonth']
-song_info_withFeatures = log_song_data_unique.drop(col_to_skip_notFeatures, axis=1)
 
-# combine tables using CatalogNo
-combined_table_withFeatures = song_info_withFeatures.merge(cluster_data, how='inner', on='CatalogNo')
-combined_table_withFeatures = combined_table_withFeatures.drop_duplicates(['CatalogNo', 'ClusterNoAdjusted'],
-                                                                          keep='first')
-combined_table_withFeatures = combined_table_withFeatures.drop(['FileName'], axis=1)
+combined_table_withFeatures = data_fns.load_recording_data(song_stats=True)
 
 longevity_dict = summary_table_yr[['lifespan_group']].to_dict()['lifespan_group']
 combined_table_withFeatures['longevity'] = combined_table_withFeatures['ClusterNoAdjusted'].map(longevity_dict)
@@ -254,11 +185,13 @@ song_variables = ['Mean Note Duration',
                   'Standard Deviation of Note Duration',
                   'Standard Deviation of Note Frequency Modulation']
 
-log_var = {6: 'ms', 10: 'ms', 11: 'ms', 17: 'number', 19: 'number', 20: 'ms'}
-log_convert_var = {9: 'kHz', 8: 'kHz', 9: 'kHz', 12: 'kHz', 13: 'kHz', 14: 'kHz', 15: 'seconds'}
-log_convert_inverse_var = {18: 'number/second'}
-no_log = {16: '%'}
-no_log_convert = {21: 'kHz'}
+adjust = 4
+log_var = {4: 'ms', 8: 'ms', 9: 'ms', 15: 'number', 17: 'number', 18: 'ms'}
+log_convert_var = {5: 'kHz', 6: 'kHz', 7: 'kHz', 10: 'kHz', 11: 'kHz',
+                   12: 'kHz', 13: 'seconds'}
+log_convert_inverse_var = {16: 'number/second'}
+no_log = {14: '%'}
+no_log_convert = {19: 'kHz'}
 
 # take e^x for y-axis
 for key, value in log_var.items():
@@ -280,8 +213,8 @@ for key, value in log_var.items():
         r, g, b, a = patch.get_facecolor()
         patch.set_facecolor((r, g, b, 0))
 
-    ax.set_ylabel(song_variables[key-6] + ' (' + value + ')', fontsize=30)
-    print(song_variables[key-6], combined_table_withFeatures.columns[key])
+    ax.set_ylabel(song_variables[key-adjust] + ' (' + value + ')', fontsize=30)
+    print(song_variables[key-adjust], combined_table_withFeatures.columns[key])
     ax.set_xlabel('')
     ax.tick_params(labelsize=30, direction='out')
     ax.set(xticklabels=[])
@@ -323,8 +256,8 @@ for key, value in log_convert_var.items():
         r, g, b, a = patch.get_facecolor()
         patch.set_facecolor((r, g, b, 0))
 
-    ax.set_ylabel(song_variables[key-6] + ' (' + value + ')', fontsize=30)
-    print(song_variables[key-6], combined_table_withFeatures.columns[key])
+    ax.set_ylabel(song_variables[key-adjust] + ' (' + value + ')', fontsize=30)
+    print(song_variables[key-adjust], combined_table_withFeatures.columns[key])
     ax.set_xlabel('')
     ax.tick_params(labelsize=30, direction='out')
     ax.set(xticklabels=[])
@@ -366,8 +299,8 @@ for key, value in log_convert_inverse_var.items():
         r, g, b, a = patch.get_facecolor()
         patch.set_facecolor((r, g, b, 0))
 
-    ax.set_ylabel(song_variables[key-6] + ' (' + value + ')', fontsize=30)
-    print(song_variables[key-6], combined_table_withFeatures.columns[key])
+    ax.set_ylabel(song_variables[key-adjust] + ' (' + value + ')', fontsize=30)
+    print(song_variables[key-adjust], combined_table_withFeatures.columns[key])
     ax.set_xlabel('')
     ax.tick_params(labelsize=30, direction='out')
     ax.set(xticklabels=[])
@@ -409,8 +342,8 @@ for key, value in no_log.items():
         r, g, b, a = patch.get_facecolor()
         patch.set_facecolor((r, g, b, 0))
 
-    ax.set_ylabel(song_variables[key-6] + ' (' + value + ')', fontsize=30)
-    print(song_variables[key-6], combined_table_withFeatures.columns[key])
+    ax.set_ylabel(song_variables[key-adjust] + ' (' + value + ')', fontsize=30)
+    print(song_variables[key-adjust], combined_table_withFeatures.columns[key])
     ax.set_xlabel('')
     ax.tick_params(labelsize=30, direction='out')
     ax.set(xticklabels=[])
@@ -452,8 +385,8 @@ for key, value in no_log_convert.items():
         r, g, b, a = patch.get_facecolor()
         patch.set_facecolor((r, g, b, 0))
 
-    ax.set_ylabel(song_variables[key-6] + ' (' + value + ')', fontsize=30)
-    print(song_variables[key-6], combined_table_withFeatures.columns[key])
+    ax.set_ylabel(song_variables[key-adjust] + ' (' + value + ')', fontsize=30)
+    print(song_variables[key-adjust], combined_table_withFeatures.columns[key])
     ax.set_xlabel('')
     ax.tick_params(labelsize=30, direction='out')
     ax.set(xticklabels=[])
@@ -486,10 +419,9 @@ if save:
         filewriter = csv.writer(file, delimiter=',')
         filewriter.writerow(['Song Feature',
                              'Short-Lived vs Long-Lived p-value'])
-        for sv in combined_table_withFeatures.columns[6:22]:
+        for sv in combined_table_withFeatures.columns[4:20]:
             s = combined_table_withFeatures.loc[combined_table_withFeatures['longevity'] == 'short-lived', sv]
             l = combined_table_withFeatures.loc[combined_table_withFeatures['longevity'] == 'long-lived', sv]
-
             filewriter.writerow([sv, ranksums(s, l)[1]])
 
     #longitude

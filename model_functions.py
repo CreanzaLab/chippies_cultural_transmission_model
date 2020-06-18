@@ -1,10 +1,10 @@
 import numpy as np
-from scipy.stats import truncnorm
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 import seaborn as sns; sns.set()
+from scipy.stats import truncnorm
 
 
 def initiate(min_type, max_type, min_rate, max_rate, dim1, vector_size):
